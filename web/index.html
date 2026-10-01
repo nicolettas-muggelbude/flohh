@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Umzugskarton</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Umzugskarton</h1>
+    <p class="sub">Daten per LAN-Kabel von Rechner zu Rechner umziehen</p>
+  </header>
+
+  <main>
+    <section class="roles" aria-label="Rolle wählen">
+      <button class="role" id="send" disabled>
+        <span class="role-name">Senden</span>
+        <span class="role-note">Dieser Rechner ist der alte. Er gibt seine Daten frei.</span>
+      </button>
+      <button class="role" id="receive" disabled>
+        <span class="role-name">Empfangen</span>
+        <span class="role-note">Dieser Rechner ist der neue. Er holt die Daten ab.</span>
+      </button>
+    </section>
+    <p class="hint">Senden und Empfangen folgen in den nächsten Meilensteinen.</p>
+  </main>
+
+  <footer>
+    <span id="info">Verbinde …</span>
+    <button id="quit" class="quiet">Beenden</button>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

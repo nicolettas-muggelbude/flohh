@@ -1,0 +1,9 @@
+# Build-Ergebnisse
+/dist/
+
+# Editor / System
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
