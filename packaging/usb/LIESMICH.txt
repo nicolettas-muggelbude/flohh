@@ -1,0 +1,40 @@
+UMZUGSKARTON
+Daten per LAN-Kabel von Rechner zu Rechner umziehen
+====================================================
+
+Welche Datei starte ich?
+
+  Windows                    Umzugskarton-Windows.exe
+  Windows auf ARM            Umzugskarton-Windows-ARM.exe
+                             (z. B. Surface Pro X, Snapdragon-Laptops)
+  Mac mit Intel-Prozessor    Umzugskarton-Mac-Intel
+  Mac mit Apple-Chip (M1 …)  Umzugskarton-Mac-AppleSilicon
+  Linux                      Umzugskarton-Linux
+  Linux auf ARM              Umzugskarton-Linux-ARM
+                             (z. B. Raspberry Pi)
+
+Welcher Mac? Apfel-Menü > "Über diesen Mac": Steht dort "Chip Apple M…",
+ist es Apple Silicon; steht dort "Prozessor Intel …", ist es Intel.
+
+
+Starten
+-------
+
+Windows:  Doppelklick auf die .exe. Erscheint "Der Computer wurde durch
+          Windows geschützt", auf "Weitere Informationen" und dann
+          "Trotzdem ausführen" klicken.
+
+Mac:      Doppelklick auf die Datei. Sie öffnet sich im Terminal, danach
+          erscheint die Oberfläche im Browser.
+
+Linux:    Terminal öffnen und die Datei vom Stick starten, z. B.:
+              /media/$USER/<Stickname>/Umzugskarton-Linux
+          Meldet Linux "Keine Berechtigung", die Datei vorher in den
+          eigenen Ordner kopieren und ausführbar machen:
+              cp /media/$USER/<Stickname>/Umzugskarton-Linux ~/
+              chmod +x ~/Umzugskarton-Linux
+              ~/Umzugskarton-Linux
+
+
+Tipp: Den Stick mit exFAT formatieren. Das können Windows, Mac und
+Linux lesen und schreiben.

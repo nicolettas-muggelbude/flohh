@@ -37,6 +37,13 @@ nur, wenn sie per Browser, Mail, Nachrichten oder AirDrop auf den Mac kamen.
   klicken (seit macOS 15 hilft Rechtsklick → „Öffnen“ nicht mehr). Oder im
   Terminal: `xattr -d com.apple.quarantine umzugskarton-darwin-*`
 
+### USB-Stick (bevorzugter Weg)
+
+`build.sh` legt zusätzlich `dist/usb/` an: alle sechs Dateien mit
+verständlichen Namen (`Umzugskarton-Windows.exe`, `Umzugskarton-Mac-Intel` …)
+und eine `LIESMICH.txt`. Den Inhalt auf einen exFAT-formatierten Stick
+kopieren – fertig. Die Vorlage der Anleitung liegt in `packaging/usb/`.
+
 ## Starten
 
 Datei ausführen – die Oberfläche öffnet sich im Standardbrowser.

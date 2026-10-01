@@ -32,4 +32,21 @@ for target in "${TARGETS[@]}"; do
     -o "$out" ./cmd/umzugskarton
 done
 
-ls -lh dist
+# USB-Stick-Ordner: verständliche Dateinamen plus Anleitung. Den Inhalt von
+# dist/usb/ einfach auf einen (am besten exFAT-formatierten) Stick kopieren.
+declare -A USB_NAMES=(
+  [windows-amd64.exe]=Umzugskarton-Windows.exe
+  [windows-arm64.exe]=Umzugskarton-Windows-ARM.exe
+  [darwin-amd64]=Umzugskarton-Mac-Intel
+  [darwin-arm64]=Umzugskarton-Mac-AppleSilicon
+  [linux-amd64]=Umzugskarton-Linux
+  [linux-arm64]=Umzugskarton-Linux-ARM
+)
+rm -rf dist/usb
+mkdir -p dist/usb
+for suffix in "${!USB_NAMES[@]}"; do
+  cp "dist/umzugskarton-$suffix" "dist/usb/${USB_NAMES[$suffix]}"
+done
+cp packaging/usb/LIESMICH.txt dist/usb/
+
+ls -lh dist dist/usb
