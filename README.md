@@ -25,9 +25,17 @@ Die Dateien landen in `dist/`:
 | `umzugskarton-darwin-amd64` | macOS, Intel |
 | `umzugskarton-darwin-arm64` | macOS, Apple Silicon (M1 und neuer) |
 
-macOS blockiert unsignierte Dateien aus dem Internet (Gatekeeper). Bis die App
-signiert ist: Rechtsklick → „Öffnen“, oder im Terminal
-`xattr -d com.apple.quarantine umzugskarton-darwin-*`.
+### macOS ohne Apple-Signatur
+
+Die Mac-Dateien sind (noch) nicht von Apple notarisiert. macOS blockiert sie
+nur, wenn sie per Browser, Mail, Nachrichten oder AirDrop auf den Mac kamen.
+
+- **Vom USB-Stick** (unter Windows/Linux vorbereitet) oder per `curl` im
+  Terminal geladen: startet direkt.
+- **Im Browser heruntergeladen:** einmal starten, dann in
+  *Systemeinstellungen → Datenschutz & Sicherheit* auf „Dennoch öffnen“
+  klicken (seit macOS 15 hilft Rechtsklick → „Öffnen“ nicht mehr). Oder im
+  Terminal: `xattr -d com.apple.quarantine umzugskarton-darwin-*`
 
 ## Starten
 
