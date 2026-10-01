@@ -1,7 +1,7 @@
 # Umzugskarton
 
 Portable App, die beim PC-Umzug Bibliotheken und Ordner per LAN-Kabel von einem
-Rechner auf einen anderen kopiert – Windows und Linux in allen Richtungen.
+Rechner auf einen anderen kopiert – Windows, Linux und macOS in allen Richtungen.
 
 **Status:** Meilenstein 1 (Gerüst). Die Oberfläche startet, Senden und
 Empfangen folgen.
@@ -22,6 +22,12 @@ Die Dateien landen in `dist/`:
 | `umzugskarton-windows-arm64.exe` | Windows auf ARM |
 | `umzugskarton-linux-amd64` | Linux, Intel/AMD |
 | `umzugskarton-linux-arm64` | Linux auf ARM (z. B. Raspberry Pi) |
+| `umzugskarton-darwin-amd64` | macOS, Intel |
+| `umzugskarton-darwin-arm64` | macOS, Apple Silicon (M1 und neuer) |
+
+macOS blockiert unsignierte Dateien aus dem Internet (Gatekeeper). Bis die App
+signiert ist: Rechtsklick → „Öffnen“, oder im Terminal
+`xattr -d com.apple.quarantine umzugskarton-darwin-*`.
 
 ## Starten
 
@@ -47,7 +53,7 @@ gofmt -l .                   # nicht formatierte Dateien anzeigen
 ```
 cmd/umzugskarton/   Einstieg, Befehle
 internal/ui/        HTTP-Server für Oberfläche und Steuer-Schnittstelle
-internal/browser/   Standardbrowser öffnen (Windows / Linux)
+internal/browser/   Standardbrowser öffnen (Windows / macOS / Linux)
 web/                HTML, CSS, JS – per go:embed in die Datei gepackt
 scripts/            Build-Skript
 ```
