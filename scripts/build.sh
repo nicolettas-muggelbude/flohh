@@ -49,4 +49,14 @@ for suffix in "${!USB_NAMES[@]}"; do
 done
 cp packaging/usb/LIESMICH.txt dist/usb/
 
+# Zwei Varianten zum Herunterladen:
+#  - ZIP: auf einen beliebigen Stick entpacken
+#  - IMG: mit Rufus/Etcher/GNOME "Laufwerke" auf einen Stick schreiben
+ZIP="dist/umzugskarton-$VERSION-usb.zip"
+IMG="dist/umzugskarton-$VERSION-usb.img"
+rm -f "$ZIP"
+(cd dist/usb && zip -q -X -r "../$(basename "$ZIP")" .)
+echo "→ $ZIP"
+(cd tools && go run ./mkusbimg -in ../dist/usb -out "../$IMG")
+
 ls -lh dist dist/usb
