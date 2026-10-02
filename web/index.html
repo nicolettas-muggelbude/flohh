@@ -7,32 +7,34 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Texte kommen aus i18n.js (data-i18n="schlüssel"), nicht aus dem HTML. -->
   <header>
     <h1>Umzugskarton</h1>
-    <p class="sub">Daten per LAN-Kabel von Rechner zu Rechner umziehen</p>
+    <p class="sub" data-i18n="app.tagline"></p>
   </header>
 
   <main>
-    <section class="roles" aria-label="Rolle wählen">
+    <section class="roles" data-i18n-aria-label="roles.label">
       <button class="role" id="send" disabled>
-        <span class="role-name">Senden</span>
-        <span class="role-note">Dieser Rechner ist der alte. Er gibt seine Daten frei.</span>
+        <span class="role-name" data-i18n="role.send.name"></span>
+        <span class="role-note" data-i18n="role.send.note"></span>
       </button>
       <button class="role" id="receive" disabled>
-        <span class="role-name">Empfangen</span>
-        <span class="role-note">Dieser Rechner ist der neue. Er holt die Daten ab.</span>
+        <span class="role-name" data-i18n="role.receive.name"></span>
+        <span class="role-note" data-i18n="role.receive.note"></span>
       </button>
     </section>
-    <p class="hint">Senden und Empfangen folgen in den nächsten Meilensteinen.</p>
+    <p class="hint" data-i18n="hint.milestone"></p>
   </main>
 
   <footer>
-    <span id="info">Verbinde …</span>
-    <button id="quit" class="quiet">Beenden</button>
+    <span id="info" data-i18n="info.connecting"></span>
+    <button id="quit" class="quiet" data-i18n="quit.button"></button>
   </footer>
 
   <div id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

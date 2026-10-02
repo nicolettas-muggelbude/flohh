@@ -59,6 +59,10 @@ func guard(host string, next http.Handler) http.Handler {
 
 // info ist die Antwort von GET /api/info. Die `json:"..."`-Angaben legen
 // fest, wie die Felder im JSON heißen.
+//
+// Grundsatz für alle /api-Antworten: nur Daten und Codes, keine Sätze. Texte
+// für Menschen entstehen in der Oberfläche (web/i18n.js), damit sie übersetzt
+// werden können. Fehler später z. B. als {"error": "disk_full"}.
 type info struct {
 	Version  string `json:"version"`
 	OS       string `json:"os"`
@@ -67,10 +71,8 @@ type info struct {
 }
 
 func (s *server) handleInfo(w http.ResponseWriter, r *http.Request) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unbekannt"
-	}
+	// Leer, wenn unbekannt – den Text dafür wählt die Oberfläche in ihrer Sprache.
+	hostname, _ := os.Hostname()
 	writeJSON(w, info{
 		Version:  s.version,
 		OS:       runtime.GOOS,
