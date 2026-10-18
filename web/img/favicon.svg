@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>flohh</title>
+  <!-- Vereinfachtes App-Icon für 16–32 px (Favicon, Taskleiste): nur Körper, Kopf und Augen. -->
+  <rect width="512" height="512" rx="116" fill="#1F1D1A"/>
+  <g transform="translate(-28 42) scale(2)">
+    <ellipse cx="112" cy="104" rx="72" ry="56" transform="rotate(-8 112 104)" fill="#E2552B"/>
+    <circle cx="196" cy="74" r="34" fill="#FFF8EF"/>
+    <circle cx="206" cy="68" r="10" fill="#1F1D1A"/>
+    <circle cx="232" cy="65" r="10" fill="#1F1D1A"/>
+  </g>
+</svg>

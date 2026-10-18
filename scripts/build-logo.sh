@@ -66,3 +66,8 @@ for s in 16 24 32; do rsvg-convert -w $s "$OUT/flohh-icon-small.svg" -o "$W/i$s.
 for s in 48 64 128 256; do rsvg-convert -w $s "$OUT/flohh-icon.svg" -o "$W/i$s.png"; done
 convert "$W"/i{16,24,32,48,64,128,256}.png "$OUT/flohh.ico"
 echo "→ assets/logo/flohh.ico"
+
+# Kopien für die Oberfläche (web/ wird per go:embed in die App gepackt)
+cp "$OUT/flohh-logo.svg" "$OUT/flohh-logo-dark.svg" web/img/
+cp "$OUT/flohh-icon-small.svg" web/img/favicon.svg
+echo "→ web/img/"

@@ -5,5 +5,5 @@ package web
 
 import "embed"
 
-//go:embed index.html style.css i18n.js app.js
+//go:embed index.html style.css i18n.js app.js img fonts
 var Files embed.FS

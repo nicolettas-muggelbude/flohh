@@ -3,13 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Flohh</title>
+  <title>flohh</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- Texte kommen aus i18n.js (data-i18n="schlüssel"), nicht aus dem HTML. -->
   <header>
-    <h1>Flohh</h1>
+    <h1>
+      <!-- Hell/dunkel nach Einstellung von System bzw. Browser -->
+      <picture>
+        <source srcset="img/flohh-logo-dark.svg" media="(prefers-color-scheme: dark)">
+        <img class="logo" src="img/flohh-logo.svg" alt="flohh" width="182" height="72">
+      </picture>
+    </h1>
     <p class="sub" data-i18n="app.tagline"></p>
   </header>
 

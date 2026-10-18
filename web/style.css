@@ -1,21 +1,37 @@
+/* DM Sans liegt in der App selbst – die Oberfläche läuft auch ohne Internet.
+   Lizenz: fonts/OFL.txt. Variable Schrift, Gewichte 400–700. */
+@font-face {
+  font-family: "DM Sans";
+  src: url("fonts/DMSans-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Farben aus assets/logo/README.md. Hell und dunkel folgen automatisch der
+   Einstellung von Betriebssystem bzw. Browser (prefers-color-scheme). */
 :root {
-  --bg: #f7f6f3;
-  --card: #ffffff;
-  --text: #1f1f1d;
-  --muted: #6b6a66;
-  --line: #dcdad4;
-  --accent: #2b6cb0;
+  --bg: #F6F3EC;        /* Grund */
+  --card: #FFFFFF;
+  --text: #1F1D1A;      /* Tinte */
+  --muted: #5E5A53;
+  --line: #E2DCD0;
+  --accent: #E2552B;    /* Floh-Rot: Flächen, Rahmen, Fokus */
+  --accent-text: #C4441D; /* Floh-Rot für Text auf Hell (Kontrast ≥ 4,5:1) */
+  --shadow: 0 1px 2px rgb(31 29 26 / .06), 0 4px 16px rgb(31 29 26 / .05);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1b1b1a;
-    --card: #262624;
-    --text: #ecebe7;
-    --muted: #a3a29d;
-    --line: #3b3b38;
-    --accent: #6ea8e8;
+    --bg: #1F1D1A;
+    --card: #2A2724;
+    --text: #F6F3EC;
+    --muted: #B3AC9F;
+    --line: #3D3934;
+    --accent: #F06A40;
+    --accent-text: #F58A66;
+    --shadow: none;
     color-scheme: dark;
   }
 }
@@ -29,7 +45,7 @@ body {
   flex-direction: column;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
+  font: 16px/1.5 "DM Sans", system-ui, -apple-system, "Segoe UI", Ubuntu, sans-serif;
   padding: 0 20px;
 }
 
@@ -40,8 +56,9 @@ header, main, footer {
 }
 
 header { padding-top: 48px; }
-h1 { margin: 0; font-size: 2rem; }
-.sub { margin: 4px 0 0; color: var(--muted); }
+h1 { margin: 0; line-height: 0; }
+.logo { display: block; height: 72px; width: auto; }
+.sub { margin: 12px 0 0; color: var(--muted); font-size: 1.15rem; }
 
 main { flex: 1; padding-top: 40px; }
 
@@ -60,13 +77,14 @@ main { flex: 1; padding-top: 40px; }
   font: inherit;
   color: inherit;
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
   cursor: pointer;
 }
 .role:hover:not(:disabled) { border-color: var(--accent); }
 .role:disabled { cursor: not-allowed; opacity: .6; }
-.role-name { font-size: 1.4rem; font-weight: 600; }
+.role-name { font-size: 1.4rem; font-weight: 700; }
 .role-note { color: var(--muted); }
 
 .hint { color: var(--muted); font-size: .9rem; }
@@ -75,6 +93,7 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 16px 0 24px;
   border-top: 1px solid var(--line);
@@ -86,12 +105,17 @@ button.quiet {
   font: inherit;
   color: var(--text);
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
   padding: 6px 14px;
   cursor: pointer;
 }
-button.quiet:hover { border-color: var(--accent); }
+button.quiet:hover { border-color: var(--accent); color: var(--accent-text); }
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
 
 #toast {
   position: fixed;
@@ -100,7 +124,7 @@ button.quiet:hover { border-color: var(--accent); }
   transform: translateX(-50%);
   max-width: calc(100% - 40px);
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--text);
   color: var(--bg);
 }
