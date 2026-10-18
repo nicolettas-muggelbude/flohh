@@ -9,14 +9,14 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/nicolettas-muggelbude/umzugskarton/web"
+	"github.com/nicolettas-muggelbude/flohh/web"
 )
 
 // apiHeader muss jede ändernde Anfrage (POST usw.) mitschicken. Eine fremde
 // Webseite im Browser kann diesen Header nicht setzen, ohne dass der Browser
 // vorher nachfragt (CORS-Preflight) – und diese Nachfrage beantworten wir nie.
-// So kann keine Webseite heimlich Aktionen in Umzugskarton auslösen.
-const apiHeader = "X-Umzugskarton"
+// So kann keine Webseite heimlich Aktionen in Flohh auslösen.
+const apiHeader = "X-Flohh"
 
 // server hält alles, was die Handler brauchen. Kleingeschrieben = nur in
 // diesem Paket sichtbar; von außen gibt es nur New.

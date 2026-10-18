@@ -1,11 +1,11 @@
-// Umzugskarton kopiert Bibliotheken und Ordner per LAN-Kabel von einem
+// Flohh kopiert Bibliotheken und Ordner per LAN-Kabel von einem
 // Rechner auf einen anderen.
 //
 // Aufruf:
 //
-//	umzugskarton            startet die Oberfläche (wie "umzugskarton gui")
-//	umzugskarton gui        startet die Oberfläche im Browser
-//	umzugskarton version    zeigt die Version
+//	flohh            startet die Oberfläche (wie "flohh gui")
+//	flohh gui        startet die Oberfläche im Browser
+//	flohh version    zeigt die Version
 package main
 
 import (
@@ -21,8 +21,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nicolettas-muggelbude/umzugskarton/internal/browser"
-	"github.com/nicolettas-muggelbude/umzugskarton/internal/ui"
+	"github.com/nicolettas-muggelbude/flohh/internal/browser"
+	"github.com/nicolettas-muggelbude/flohh/internal/ui"
 )
 
 // version wird beim Bauen gesetzt: go build -ldflags "-X main.version=1.2.3"
@@ -47,7 +47,7 @@ func run(args []string) error {
 	case "gui":
 		return runGUI(args)
 	case "version", "--version", "-v":
-		fmt.Println("umzugskarton", version)
+		fmt.Println("flohh", version)
 		return nil
 	case "help", "--help", "-h":
 		printHelp()
@@ -59,7 +59,7 @@ func run(args []string) error {
 }
 
 func printHelp() {
-	fmt.Println(`Umzugskarton – Daten per LAN-Kabel von Rechner zu Rechner umziehen
+	fmt.Println(`Flohh – Daten springen von Rechner zu Rechner
 
 Befehle:
   gui        Oberfläche im Browser starten (Standard)
@@ -104,7 +104,7 @@ func runGUI(args []string) error {
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- server.Serve(ln) }()
 
-	log.Printf("Umzugskarton %s läuft auf %s", version, url)
+	log.Printf("Flohh %s läuft auf %s", version, url)
 	if !*noBrowser {
 		if err := browser.Open(url); err != nil {
 			log.Printf("Browser ließ sich nicht öffnen (%v). Bitte %s selbst öffnen.", err, url)
@@ -120,7 +120,7 @@ func runGUI(args []string) error {
 		}
 	}
 
-	log.Println("Umzugskarton wird beendet …")
+	log.Println("Flohh wird beendet …")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return server.Shutdown(shutdownCtx)

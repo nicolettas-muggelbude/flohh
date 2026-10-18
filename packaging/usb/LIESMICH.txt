@@ -1,16 +1,16 @@
-UMZUGSKARTON
-Daten per LAN-Kabel von Rechner zu Rechner umziehen
-====================================================
+FLOHH
+Daten springen von Rechner zu Rechner
+=====================================
 
 Welche Datei starte ich?
 
-  Windows                    Umzugskarton-Windows.exe
-  Windows auf ARM            Umzugskarton-Windows-ARM.exe
+  Windows                    Flohh-Windows.exe
+  Windows auf ARM            Flohh-Windows-ARM.exe
                              (z. B. Surface Pro X, Snapdragon-Laptops)
-  Mac mit Intel-Prozessor    Umzugskarton-Mac-Intel
-  Mac mit Apple-Chip (M1 …)  Umzugskarton-Mac-AppleSilicon
-  Linux                      Umzugskarton-Linux
-  Linux auf ARM              Umzugskarton-Linux-ARM
+  Mac mit Intel-Prozessor    Flohh-Mac-Intel
+  Mac mit Apple-Chip (M1 …)  Flohh-Mac-AppleSilicon
+  Linux                      Flohh-Linux
+  Linux auf ARM              Flohh-Linux-ARM
                              (z. B. Raspberry Pi)
 
 Welcher Mac? Apfel-Menü > "Über diesen Mac": Steht dort "Chip Apple M…",
@@ -28,12 +28,12 @@ Mac:      Doppelklick auf die Datei. Sie öffnet sich im Terminal, danach
           erscheint die Oberfläche im Browser.
 
 Linux:    Terminal öffnen und die Datei vom Stick starten, z. B.:
-              /media/$USER/<Stickname>/Umzugskarton-Linux
+              /media/$USER/<Stickname>/Flohh-Linux
           Meldet Linux "Keine Berechtigung", die Datei vorher in den
           eigenen Ordner kopieren und ausführbar machen:
-              cp /media/$USER/<Stickname>/Umzugskarton-Linux ~/
-              chmod +x ~/Umzugskarton-Linux
-              ~/Umzugskarton-Linux
+              cp /media/$USER/<Stickname>/Flohh-Linux ~/
+              chmod +x ~/Flohh-Linux
+              ~/Flohh-Linux
 
 
 Tipp: Den Stick mit exFAT formatieren. Das können Windows, Mac und

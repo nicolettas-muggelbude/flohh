@@ -3,9 +3,9 @@
 // Texte immer über t("schlüssel") aus i18n.js holen, nie direkt hinschreiben.
 
 // Ruft die Steuer-Schnittstelle der App auf. Ändernde Aufrufe (POST) brauchen
-// den Header X-Umzugskarton, sonst lehnt der Server sie ab.
+// den Header X-Flohh, sonst lehnt der Server sie ab.
 async function api(path, options = {}) {
-  const headers = { "X-Umzugskarton": "1", ...(options.headers || {}) };
+  const headers = { "X-Flohh": "1", ...(options.headers || {}) };
   const res = await fetch(path, { ...options, headers });
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json();

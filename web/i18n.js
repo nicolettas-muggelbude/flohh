@@ -13,7 +13,7 @@
 // Deutsch zurück.
 const messages = {
   de: {
-    "app.tagline": "Daten per LAN-Kabel von Rechner zu Rechner umziehen",
+    "app.tagline": "Daten springen von Rechner zu Rechner",
     "roles.label": "Rolle wählen",
     "role.send.name": "Senden",
     "role.send.note": "Dieser Rechner ist der alte. Er gibt seine Daten frei.",
@@ -27,7 +27,7 @@ const messages = {
     "error.generic": "Fehler: {detail}",
     "quit.button": "Beenden",
     "quit.failed": "Beenden fehlgeschlagen: {detail}",
-    "quit.done.title": "Umzugskarton wurde beendet.",
+    "quit.done.title": "Flohh wurde beendet.",
     "quit.done.text": "Dieses Fenster kann geschlossen werden.",
   },
 };
