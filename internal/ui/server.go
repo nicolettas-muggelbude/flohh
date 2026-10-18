@@ -3,14 +3,26 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/web"
 )
+
+// Session ist die Kopplung mit dem anderen Rechner (peer.Manager). Als
+// Schnittstelle, damit Tests eine Attrappe einsetzen können.
+type Session interface {
+	State() peer.State
+	SetRole(peer.Role) error
+	Pair(ctx context.Context, id, code string) error
+	Reset()
+}
 
 // apiHeader muss jede ändernde Anfrage (POST usw.) mitschicken. Eine fremde
 // Webseite im Browser kann diesen Header nicht setzen, ohne dass der Browser
@@ -23,6 +35,7 @@ const apiHeader = "X-Flohh"
 type server struct {
 	version string
 	quit    func() // beendet die App
+	session Session
 }
 
 // New baut den HTTP-Handler der Oberfläche.
@@ -30,13 +43,17 @@ type server struct {
 // host ist die Adresse, unter der die Oberfläche läuft (z. B.
 // "127.0.0.1:53817"). Anfragen mit einem anderen Host-Header werden
 // abgelehnt; das schützt vor DNS-Rebinding-Angriffen.
-func New(version, host string, quit func()) http.Handler {
-	s := &server{version: version, quit: quit}
+func New(version, host string, quit func(), session Session) http.Handler {
+	s := &server{version: version, quit: quit, session: session}
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /", http.FileServerFS(web.Files))
 	mux.HandleFunc("GET /api/info", s.handleInfo)
 	mux.HandleFunc("POST /api/quit", s.handleQuit)
+	mux.HandleFunc("GET /api/state", s.handleState)
+	mux.HandleFunc("POST /api/role", s.handleRole)
+	mux.HandleFunc("POST /api/pair", s.handlePair)
+	mux.HandleFunc("POST /api/reset", s.handleReset)
 
 	return guard(host, mux)
 }
@@ -85,6 +102,69 @@ func (s *server) handleQuit(w http.ResponseWriter, r *http.Request) {
 	// Erst antworten, dann beenden – sonst bekommt der Browser keine Antwort.
 	writeJSON(w, map[string]bool{"ok": true})
 	go s.quit()
+}
+
+func (s *server) handleState(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.session.State())
+}
+
+func (s *server) handleRole(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Role peer.Role `json:"role"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if err := s.session.SetRole(req.Role); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, s.session.State())
+}
+
+func (s *server) handlePair(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Peer string `json:"peer"`
+		Code string `json:"code"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if err := s.session.Pair(r.Context(), req.Peer, req.Code); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, s.session.State())
+}
+
+func (s *server) handleReset(w http.ResponseWriter, r *http.Request) {
+	s.session.Reset()
+	writeJSON(w, s.session.State())
+}
+
+func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		writeErrorCode(w, http.StatusBadRequest, "bad_request")
+		return false
+	}
+	return true
+}
+
+// writeError antwortet mit {"error": "<code>"}; die Oberfläche übersetzt ihn.
+func writeError(w http.ResponseWriter, err error) {
+	code := "internal"
+	var pe *peer.Error
+	if errors.As(err, &pe) {
+		code = pe.Code
+	}
+	writeErrorCode(w, http.StatusConflict, code)
+}
+
+func writeErrorCode(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": code})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

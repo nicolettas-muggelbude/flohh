@@ -11,8 +11,9 @@ Portable App, die beim PC-Umzug Bibliotheken und Ordner von einem Rechner auf
 einen anderen kopiert – Windows, Linux und macOS in allen Richtungen. Heute per
 LAN-Kabel, später auch über WLAN und Thunderbolt/USB4.
 
-**Status:** Meilenstein 1 (Gerüst). Die Oberfläche startet, Senden und
-Empfangen folgen.
+**Status:** Meilenstein 2 läuft. Zwei Rechner finden sich im Netz (auch per
+direktem Kabel) und koppeln sich verschlüsselt per 6-stelligem Code. Die
+Übertragung der Daten folgt.
 
 ## Bauen
 

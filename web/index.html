@@ -22,17 +22,63 @@
   </header>
 
   <main>
-    <section class="roles" data-i18n-aria-label="roles.label">
-      <button class="role" id="send" disabled>
-        <span class="role-name" data-i18n="role.send.name"></span>
-        <span class="role-note" data-i18n="role.send.note"></span>
-      </button>
-      <button class="role" id="receive" disabled>
-        <span class="role-name" data-i18n="role.receive.name"></span>
-        <span class="role-note" data-i18n="role.receive.note"></span>
-      </button>
+    <!-- Startseite: Rolle wählen -->
+    <section id="view-home">
+      <div class="roles" role="group" data-i18n-aria-label="roles.label">
+        <button class="role" data-role="send">
+          <span class="role-name" data-i18n="role.send.name"></span>
+          <span class="role-note" data-i18n="role.send.note"></span>
+        </button>
+        <button class="role" data-role="receive">
+          <span class="role-name" data-i18n="role.receive.name"></span>
+          <span class="role-note" data-i18n="role.receive.note"></span>
+        </button>
+      </div>
+      <p class="hint" data-i18n="home.hint"></p>
     </section>
-    <p class="hint" data-i18n="hint.milestone"></p>
+
+    <!-- Empfänger: Code anzeigen und warten -->
+    <section id="view-receive" class="panel" hidden>
+      <h2 data-i18n="receive.title"></h2>
+      <p data-i18n="receive.instruction"></p>
+      <p class="code" id="code" aria-live="polite"></p>
+      <p class="status" id="receive-status" aria-live="polite"></p>
+      <div class="actions">
+        <button class="quiet" data-action="reset" data-i18n="common.cancel"></button>
+      </div>
+    </section>
+
+    <!-- Sender: Rechner auswählen, Code eingeben -->
+    <section id="view-send" class="panel" hidden>
+      <h2 data-i18n="send.title"></h2>
+      <p data-i18n="send.instruction"></p>
+      <fieldset class="peers">
+        <legend data-i18n="send.peersLabel"></legend>
+        <div id="peer-list"></div>
+        <p class="status" id="send-status" aria-live="polite"></p>
+      </fieldset>
+      <form id="pair-form" class="pair-form">
+        <label for="code-input" data-i18n="send.codeLabel"></label>
+        <div class="pair-row">
+          <input id="code-input" inputmode="numeric" autocomplete="off" maxlength="7"
+                 placeholder="123 456" required>
+          <button type="submit" class="primary" id="pair-button" data-i18n="send.connect"></button>
+        </div>
+      </form>
+      <div class="actions">
+        <button class="quiet" data-action="reset" data-i18n="common.cancel"></button>
+      </div>
+    </section>
+
+    <!-- Beide: gekoppelt -->
+    <section id="view-connected" class="panel" hidden>
+      <h2 data-i18n="connected.title"></h2>
+      <p id="connected-text"></p>
+      <p class="hint" data-i18n="connected.next"></p>
+      <div class="actions">
+        <button class="quiet" data-action="reset" data-i18n="connected.disconnect"></button>
+      </div>
+    </section>
   </main>
 
   <footer>

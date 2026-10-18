@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/nicolettas-muggelbude/flohh/internal/browser"
+	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/internal/ui"
 )
 
@@ -93,8 +94,16 @@ func runGUI(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Die Kopplung mit dem anderen Rechner. Sie wird erst im Netz aktiv,
+	// wenn in der Oberfläche eine Rolle gewählt wird.
+	session, err := peer.New(peer.DefaultConfig())
+	if err != nil {
+		return fmt.Errorf("Netzwerk kann nicht vorbereitet werden: %w", err)
+	}
+	defer session.Reset()
+
 	server := &http.Server{
-		Handler:           ui.New(version, addr, stop),
+		Handler:           ui.New(version, addr, stop, session),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
