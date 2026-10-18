@@ -1,4 +1,9 @@
-# Flohh
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/flohh-logo-dark.svg">
+    <img src="assets/logo/flohh-logo.svg" alt="flohh" height="96">
+  </picture>
+</h1>
 
 *Daten springen von Rechner zu Rechner.*
 

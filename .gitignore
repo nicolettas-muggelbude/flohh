@@ -1,5 +1,6 @@
 # Build-Ergebnisse
 /dist/
+*.syso
 
 # Editor / System
 .vscode/

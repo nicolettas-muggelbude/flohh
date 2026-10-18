@@ -16,6 +16,17 @@ TARGETS=(
   darwin/arm64
 )
 
+# Windows: Icon und Versionsinfo als Ressourcen-Datei (.syso). go build nimmt
+# Dateien rsrc_windows_<arch>.syso im Paketordner automatisch mit. Sie werden
+# nur für diesen Lauf erzeugt und danach wieder gelöscht.
+trap 'rm -f cmd/flohh/rsrc_windows_*.syso' EXIT
+go run github.com/tc-hib/go-winres@v0.3.3 simply \
+  --arch amd64,arm64 --out cmd/flohh/rsrc \
+  --icon assets/logo/flohh.ico --manifest cli \
+  --product-name flohh --file-description "flohh – Daten springen von Rechner zu Rechner" \
+  --original-filename flohh.exe --copyright "Nicoletta" \
+  --file-version 0.0.0 --product-version "$VERSION"
+
 mkdir -p dist
 for target in "${TARGETS[@]}"; do
   os=${target%/*}
