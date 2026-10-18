@@ -38,3 +38,11 @@ Linux:    Terminal öffnen und die Datei vom Stick starten, z. B.:
 
 Tipp: Den Stick mit exFAT formatieren. Das können Windows, Mac und
 Linux lesen und schreiben.
+
+
+Lizenz
+------
+
+flohh ist freie Software unter der GNU General Public License v3.0
+(siehe LICENSE.txt). Logo und Floh-Figur: © 2026 Nicoletta, CC BY-SA 4.0.
+Enthaltene Bibliotheken und Schriften: siehe THIRD-PARTY-LICENSES.txt.

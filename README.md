@@ -77,9 +77,19 @@ gofmt -l .            # nicht formatierte Dateien anzeigen
 
 ```
 cmd/flohh/          Einstieg, Befehle
+internal/peer/      Andere Rechner finden, verschlüsselt per Code koppeln
 internal/ui/        HTTP-Server für Oberfläche und Steuer-Schnittstelle
 internal/browser/   Standardbrowser öffnen (Windows / macOS / Linux)
 web/                HTML, CSS, JS – per go:embed in die Datei gepackt
+assets/logo/        Logo, Icons (Quellen und fertige Dateien)
 packaging/usb/      Anleitung für den Stick
-scripts/            Build-Skript
+scripts/            Build-Skripte
 ```
+
+## Lizenz
+
+- **Programmcode:** [GNU General Public License v3.0](LICENSE) (GPLv3)
+- **Logo und Floh-Figur:** [CC BY-SA 4.0](assets/logo/LICENSE),
+  © 2026 Nicoletta
+- **Enthaltene Bibliotheken und Schriften** (BSD-3-Clause, SIL Open Font
+  License): siehe [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt)

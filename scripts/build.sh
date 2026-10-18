@@ -24,7 +24,7 @@ go run github.com/tc-hib/go-winres@v0.3.3 simply \
   --arch amd64,arm64 --out cmd/flohh/rsrc \
   --icon assets/logo/flohh.ico --manifest cli \
   --product-name flohh --file-description "flohh – Daten springen von Rechner zu Rechner" \
-  --original-filename flohh.exe --copyright "Nicoletta" \
+  --original-filename flohh.exe --copyright "© 2026 Nicoletta · GPLv3" \
   --file-version 0.0.0 --product-version "$VERSION"
 
 mkdir -p dist
@@ -59,6 +59,9 @@ for suffix in "${!USB_NAMES[@]}"; do
   cp "dist/flohh-$suffix" "dist/usb/${USB_NAMES[$suffix]}"
 done
 cp packaging/usb/LIESMICH.txt dist/usb/
+# Lizenzen müssen mit den Programmen weitergegeben werden (GPL, BSD).
+cp LICENSE dist/usb/LICENSE.txt
+cp THIRD-PARTY-LICENSES.txt dist/usb/
 
 # Zum Herunterladen: ZIP, das man auf einen beliebigen Stick entpackt.
 ZIP="dist/flohh-$VERSION-usb.zip"
