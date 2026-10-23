@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/desktop"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/web"
 )
@@ -54,6 +55,7 @@ func New(version, host string, quit func(), session Session) http.Handler {
 	mux.HandleFunc("POST /api/role", s.handleRole)
 	mux.HandleFunc("POST /api/pair", s.handlePair)
 	mux.HandleFunc("POST /api/reset", s.handleReset)
+	mux.HandleFunc("POST /api/menu", s.handleMenu)
 
 	return guard(host, mux)
 }
@@ -81,10 +83,11 @@ func guard(host string, next http.Handler) http.Handler {
 // für Menschen entstehen in der Oberfläche (web/i18n.js), damit sie übersetzt
 // werden können. Fehler später z. B. als {"error": "disk_full"}.
 type info struct {
-	Version  string `json:"version"`
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
-	Hostname string `json:"hostname"`
+	Version  string         `json:"version"`
+	OS       string         `json:"os"`
+	Arch     string         `json:"arch"`
+	Hostname string         `json:"hostname"`
+	Menu     desktop.Status `json:"menu"` // Linux: Aufnahme ins Anwendungsmenü
 }
 
 func (s *server) handleInfo(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +98,38 @@ func (s *server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		OS:       runtime.GOOS,
 		Arch:     runtime.GOARCH,
 		Hostname: hostname,
+		Menu:     desktop.State(),
 	})
+}
+
+// handleMenu nimmt flohh ins Anwendungsmenü auf („install“) oder merkt sich
+// „Nein danke“ („decline“).
+func (s *server) handleMenu(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Action string `json:"action"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	var err error
+	switch req.Action {
+	case "install":
+		var icon []byte
+		if icon, err = web.Files.ReadFile("img/icon.svg"); err == nil {
+			err = desktop.Install(icon)
+		}
+	case "decline":
+		err = desktop.Decline()
+	default:
+		writeErrorCode(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if err != nil {
+		log.Printf("Anwendungsmenü: %v", err)
+		writeErrorCode(w, http.StatusConflict, "menu_failed")
+		return
+	}
+	writeJSON(w, desktop.State())
 }
 
 func (s *server) handleQuit(w http.ResponseWriter, r *http.Request) {

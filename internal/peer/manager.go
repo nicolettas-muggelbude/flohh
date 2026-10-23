@@ -79,6 +79,15 @@ type Config struct {
 
 	// Targets liefert die Ziele für Rundrufe; nil = alle Schnittstellen.
 	Targets func() []*net.UDPAddr
+
+	// Logf schreibt Hinweise für die Fehlersuche (z. B. log.Printf); nil = still.
+	Logf func(format string, args ...any)
+}
+
+func (m *Manager) logf(format string, args ...any) {
+	if m.cfg.Logf != nil {
+		m.cfg.Logf(format, args...)
+	}
 }
 
 // DefaultConfig ist die Einstellung für den normalen Betrieb.
@@ -198,6 +207,11 @@ func (m *Manager) SetRole(role Role) error {
 	if role == RoleReceive {
 		m.code, m.failures = newCode(), 0
 	}
+	tcpInfo := "keiner (baut Verbindungen selbst auf)"
+	if m.tcpPort != 0 {
+		tcpInfo = strconv.Itoa(m.tcpPort)
+	}
+	m.logf("Rolle %s: Suche über UDP-Port %d, TCP-Port %s", role, m.udpAddr.Port, tcpInfo)
 	m.mu.Unlock()
 
 	if ln != nil {
@@ -327,6 +341,10 @@ func (m *Manager) takePending(ctx context.Context, id string, wait time.Duration
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
+	m.mu.Lock()
+	port := m.tcpPort
+	m.mu.Unlock()
+	m.logf("Der Empfänger hat nicht angerufen (blockt hier eine Firewall TCP-Port %d?)", port)
 	return nil, &Error{ErrConnectFailed}
 }
 
@@ -339,6 +357,7 @@ func (m *Manager) paired(c *tls.Conn, p *Peer) bool {
 	}
 	partner := *p
 	m.conn, m.partner, m.phase, m.errCode = c, &partner, PhaseConnected, ""
+	m.logf("Gekoppelt mit %s (%s)", p.Name, p.OS)
 	// Suche beenden; die Verbindung selbst bleibt bestehen.
 	m.cancel()
 	m.cancel = nil
@@ -388,6 +407,13 @@ func (m *Manager) found(b beacon, from *net.UDPAddr) {
 	p := &Peer{ID: b.ID, Name: b.Name, OS: b.OS, Role: b.Role, seen: time.Now()}
 	if b.Port != 0 {
 		p.addr = net.JoinHostPort(from.IP.String(), strconv.Itoa(b.Port))
+	}
+	if _, known := m.peers[b.ID]; !known {
+		addr := p.addr
+		if addr == "" {
+			addr = from.IP.String() + " (nimmt keine Verbindungen an)"
+		}
+		m.logf("Gefunden: %s (%s, Rolle %s) unter %s", b.Name, b.OS, b.Role, addr)
 	}
 	m.peers[b.ID] = p
 
@@ -443,9 +469,11 @@ func (m *Manager) acceptLoop(ctx context.Context, ln net.Listener) {
 }
 
 func (m *Manager) handleIncoming(ctx context.Context, raw net.Conn) {
+	m.logf("Eingehende Verbindung von %s", raw.RemoteAddr())
 	c := tls.Server(raw, m.tls)
 	c.SetDeadline(time.Now().Add(10 * time.Second))
 	if err := c.HandshakeContext(ctx); err != nil {
+		m.logf("Verschlüsselung mit %s fehlgeschlagen: %v", raw.RemoteAddr(), err)
 		c.Close()
 		return
 	}
@@ -509,21 +537,26 @@ func (m *Manager) countFailure(err error) {
 }
 
 func (m *Manager) dial(ctx context.Context, addr string) (*tls.Conn, error) {
+	m.logf("Verbinde mit %s …", addr)
 	d := net.Dialer{Timeout: 5 * time.Second}
 	raw, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
+		m.logf("Verbindung zu %s fehlgeschlagen: %v (blockt dort eine Firewall?)", addr, err)
 		return nil, &Error{ErrConnectFailed}
 	}
 	c := tls.Client(raw, m.tls)
 	c.SetDeadline(time.Now().Add(10 * time.Second))
 	if err := c.HandshakeContext(ctx); err != nil {
+		m.logf("Verschlüsselung mit %s fehlgeschlagen: %v", addr, err)
 		c.Close()
 		return nil, &Error{ErrConnectFailed}
 	}
 	if err := writeHello(c, m.helloMsg()); err != nil {
+		m.logf("Verbindung zu %s abgebrochen: %v", addr, err)
 		c.Close()
 		return nil, &Error{ErrConnectFailed}
 	}
+	m.logf("Verbunden mit %s, warte auf Kopplung per Code", addr)
 	c.SetDeadline(time.Time{})
 	return c, nil
 }

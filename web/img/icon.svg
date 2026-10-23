@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>flohh</title>
+  <!-- App-Icon ab 48 px. Für kleinere Größen flohh-icon-small.svg nehmen. -->
+  <rect width="512" height="512" rx="116" fill="#1F1D1A"/>
+  <g transform="translate(-28 42) scale(2)">
+    <ellipse cx="112" cy="104" rx="72" ry="56" transform="rotate(-8 112 104)" fill="#E2552B"/>
+    <g fill="none" stroke="#F6F3EC" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M86 106 L56 136 L80 164 L54 190 L76 190"/>
+      <path d="M124 110 L110 140 L130 164 L118 188 L136 188"/>
+      <path d="M158 104 L144 134 L164 160 L152 188 L170 188"/>
+    </g>
+    <g fill="none" stroke="#F6F3EC" stroke-width="5" stroke-linecap="round">
+      <path d="M186 42 L178 26"/><path d="M192 40 L192 22"/><path d="M198 42 L206 27"/>
+    </g>
+    <circle cx="196" cy="74" r="34" fill="#FFF8EF"/>
+    <circle cx="202" cy="66" r="13" fill="#FFFFFF" stroke="#1F1D1A" stroke-width="5"/>
+    <circle cx="228" cy="63" r="14" fill="#FFFFFF" stroke="#1F1D1A" stroke-width="5"/>
+    <circle cx="206" cy="68" r="6" fill="#1F1D1A"/>
+    <circle cx="232" cy="65" r="6.5" fill="#1F1D1A"/>
+  </g>
+</svg>

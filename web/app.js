@@ -52,10 +52,24 @@ async function loadInfo() {
       arch: i.arch,
       version: i.version,
     });
+    document.getElementById("menu-offer").hidden = !i.menu.offer;
   } catch (err) {
     el.textContent = t("info.noConnection");
   }
 }
+
+// Linux: ins Anwendungsmenü aufnehmen oder „Nein danke“
+async function menu(action) {
+  try {
+    await post("/api/menu", { action });
+    document.getElementById("menu-offer").hidden = true;
+    if (action === "install") toast(t("menu.done"));
+  } catch (err) {
+    toast(errorText(err.code));
+  }
+}
+document.getElementById("menu-install").addEventListener("click", () => menu("install"));
+document.getElementById("menu-decline").addEventListener("click", () => menu("decline"));
 
 // ---- Zustand vom Server holen und anzeigen ----
 

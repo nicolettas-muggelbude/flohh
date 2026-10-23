@@ -27,13 +27,32 @@ Windows:  Doppelklick auf die .exe. Erscheint "Der Computer wurde durch
 Mac:      Doppelklick auf die Datei. Sie öffnet sich im Terminal, danach
           erscheint die Oberfläche im Browser.
 
-Linux:    Terminal öffnen und die Datei vom Stick starten, z. B.:
-              /media/$USER/<Stickname>/Flohh-Linux
-          Meldet Linux "Keine Berechtigung", die Datei vorher in den
-          eigenen Ordner kopieren und ausführbar machen:
+Linux:    Auf dem Stick lässt sich die Datei nicht starten (USB-Sticks
+          kennen kein Ausführungsrecht). Darum einmalig:
+
+          1. Flohh-Linux vom Stick in den eigenen Ordner kopieren,
+             z. B. auf den Schreibtisch.
+          2. Rechtsklick auf die Kopie > Eigenschaften > "Als Programm
+             ausführen" bzw. "Ausführbar" einschalten.
+          3. Rechtsklick auf die Kopie > "Als Programm ausführen".
+             (Ein Doppelklick startet unter Ubuntu keine Programme.)
+          4. flohh fragt dann, ob es ins Anwendungsmenü soll. Mit
+             "Aufnehmen" startest du es künftig mit einem Klick über
+             "Anwendungen anzeigen". Die Kopie auf dem Schreibtisch kann
+             danach weg.
+
+          Alternativ im Terminal:
               cp /media/$USER/<Stickname>/Flohh-Linux ~/
               chmod +x ~/Flohh-Linux
               ~/Flohh-Linux
+
+
+Stick abziehen
+--------------
+
+Unter Windows und macOS kopiert sich flohh beim Start vom Stick in einen
+temporären Ordner. Der Stick ist sofort frei: Du kannst ihn abziehen und
+damit flohh auf dem zweiten Rechner starten.
 
 
 Tipp: Den Stick mit exFAT formatieren. Das können Windows, Mac und

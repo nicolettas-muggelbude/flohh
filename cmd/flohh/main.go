@@ -23,6 +23,7 @@ import (
 
 	"github.com/nicolettas-muggelbude/flohh/internal/browser"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
+	"github.com/nicolettas-muggelbude/flohh/internal/stick"
 	"github.com/nicolettas-muggelbude/flohh/internal/ui"
 )
 
@@ -80,6 +81,17 @@ func runGUI(args []string) error {
 		return err
 	}
 
+	// Vom USB-Stick gestartet? Dann aus einer temporären Kopie neu starten,
+	// damit der Stick sofort frei ist und abgezogen werden kann.
+	stick.Cleanup()
+	if relaunched, err := stick.Relaunch(append([]string{"gui"}, args...)); err != nil {
+		log.Printf("Kopie vom Stick fehlgeschlagen (%v) – flohh läuft direkt vom Stick.", err)
+	} else if relaunched {
+		log.Println("flohh läuft jetzt aus einer Kopie – der Stick kann abgezogen werden.")
+		return nil
+	}
+	defer stick.Done()
+
 	// Nur auf 127.0.0.1 lauschen: Die Oberfläche ist ausschließlich auf
 	// diesem Rechner erreichbar, nie aus dem Netzwerk.
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
@@ -96,7 +108,9 @@ func runGUI(args []string) error {
 
 	// Die Kopplung mit dem anderen Rechner. Sie wird erst im Netz aktiv,
 	// wenn in der Oberfläche eine Rolle gewählt wird.
-	session, err := peer.New(peer.DefaultConfig())
+	cfg := peer.DefaultConfig()
+	cfg.Logf = log.Printf // Hinweise zur Verbindung im Konsolenfenster
+	session, err := peer.New(cfg)
 	if err != nil {
 		return fmt.Errorf("Netzwerk kann nicht vorbereitet werden: %w", err)
 	}

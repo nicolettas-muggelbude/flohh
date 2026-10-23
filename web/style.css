@@ -93,6 +93,19 @@ main { flex: 1; padding-top: 40px; }
 
 .hint { color: var(--muted); font-size: .9rem; }
 
+/* Linux: Angebot fürs Anwendungsmenü */
+.banner {
+  width: 100%;
+  max-width: 760px;
+  margin: 24px auto 0;
+  padding: 16px 20px;
+  border: 1.5px solid var(--accent);
+  border-radius: 16px;
+  background: var(--card);
+}
+.banner p { margin: 0; }
+.banner .actions { margin-top: 12px; }
+
 /* ---- Ansichten Empfangen / Senden / Verbunden ---- */
 
 .panel {
