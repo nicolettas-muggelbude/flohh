@@ -35,14 +35,24 @@ func Relaunch(args []string) (bool, error) {
 		return false, nil
 	}
 
-	dir, err := os.MkdirTemp("", prefix)
-	if err != nil {
-		return false, err
-	}
+	// Immer derselbe Ort: Die Windows-Firewall merkt sich ihre Freigabe pro
+	// Programmpfad. Mit einem neuen Ordner bei jedem Start würde sie jedes
+	// Mal neu fragen. Läuft dort schon eine Kopie, geht es in einen Extra-Ordner.
+	dir := filepath.Join(os.TempDir(), "flohh")
 	dst := filepath.Join(dir, filepath.Base(exe))
-	if err := copyFile(exe, dst); err != nil {
-		os.RemoveAll(dir)
-		return false, err
+	err = os.MkdirAll(dir, 0o755)
+	if err == nil {
+		err = copyFile(exe, dst)
+	}
+	if err != nil {
+		if dir, err = os.MkdirTemp("", prefix); err != nil {
+			return false, err
+		}
+		dst = filepath.Join(dir, filepath.Base(exe))
+		if err := copyFile(exe, dst); err != nil {
+			os.RemoveAll(dir)
+			return false, err
+		}
 	}
 	cmd := exec.Command(dst, args...)
 	cmd.Dir = dir // Arbeitsordner nicht auf dem Stick, sonst bleibt er belegt
@@ -55,9 +65,10 @@ func Relaunch(args []string) (bool, error) {
 	return true, nil
 }
 
-// Cleanup löscht Kopien früherer Läufe. Unter Windows lässt sich eine
-// laufende Datei nicht löschen – die eigene Kopie verschwindet deshalb erst
-// beim nächsten Start.
+// Cleanup löscht Extra-Kopien früherer Läufe. Der feste Ordner „flohh“
+// bleibt (dort überschreibt der nächste Start die Datei). Unter Windows
+// lässt sich eine laufende Datei nicht löschen – sie verschwindet dann beim
+// nächsten Start.
 func Cleanup() {
 	own := os.Getenv(envCopy)
 	matches, _ := filepath.Glob(filepath.Join(os.TempDir(), prefix+"*"))

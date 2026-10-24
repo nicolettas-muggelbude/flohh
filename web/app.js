@@ -53,6 +53,7 @@ async function loadInfo() {
       version: i.version,
     });
     document.getElementById("menu-offer").hidden = !i.menu.offer;
+    document.getElementById("firewall-hint").hidden = i.os !== "windows";
   } catch (err) {
     el.textContent = t("info.noConnection");
   }

@@ -20,6 +20,7 @@ const messages = {
     "role.receive.name": "Empfangen",
     "role.receive.note": "Dieser Rechner ist der neue. Er holt die Daten ab.",
     "home.hint": "Starte flohh auf beiden Rechnern und wähle jeweils die passende Rolle.",
+    "home.firewallWindows": "Windows fragt beim ersten Mal, ob flohh ins Netzwerk darf. Bitte „Zugriff zulassen“ klicken – mit Haken bei „Öffentliche Netzwerke“, denn ein direktes Kabel gilt für Windows als öffentliches Netz.",
     "common.cancel": "Abbrechen",
 
     "receive.title": "Empfangen",

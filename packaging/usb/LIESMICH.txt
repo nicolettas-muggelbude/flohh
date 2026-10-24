@@ -23,6 +23,9 @@ Starten
 Windows:  Doppelklick auf die .exe. Erscheint "Der Computer wurde durch
           Windows geschützt", auf "Weitere Informationen" und dann
           "Trotzdem ausführen" klicken.
+          Fragt die Windows-Firewall nach, Haken bei "Öffentliche
+          Netzwerke" setzen und "Zugriff zulassen" klicken (ein direktes
+          Kabel gilt als öffentliches Netz). Das kommt nur beim ersten Mal.
 
 Mac:      Doppelklick auf die Datei. Sie öffnet sich im Terminal, danach
           erscheint die Oberfläche im Browser.
