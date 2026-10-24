@@ -128,7 +128,7 @@ main { flex: 1; padding-top: 40px; }
 }
 
 .status { color: var(--muted); min-height: 1.5em; }
-.peers .status:empty { display: none; }
+.peers .status:empty, #offer-wait:empty { display: none; }
 
 .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
 
@@ -173,6 +173,60 @@ input#code-input {
   border-radius: 10px;
 }
 input#code-input:focus-visible { border-color: var(--accent); }
+
+.panel h3 { margin: 24px 0 12px; font-size: 1.1rem; }
+
+/* Ordnerliste (Freigeben / Abholen) */
+.folder-list { display: grid; gap: 8px; }
+.folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  min-height: 52px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.folder:hover, .folder:has(input:checked) { border-color: var(--accent); }
+.folder input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex: none; }
+.folder-text { display: flex; flex-direction: column; min-width: 0; }
+.folder-name { font-weight: 700; }
+.folder-path {
+  color: var(--muted);
+  font-size: .85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-size { color: var(--muted); margin-left: auto; white-space: nowrap; font-size: .9rem; }
+
+/* Fortschritt */
+.bar {
+  height: 14px;
+  margin: 16px 0 12px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width .6s ease;
+}
+.progress-line { margin: 0 0 4px !important; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.current {
+  margin-top: 8px !important;
+  color: var(--muted);
+  font-size: .85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result { font-weight: 700; font-size: 1.1rem; margin-top: 8px !important; }
+.failures { margin: 4px 0 0; padding-left: 20px; color: var(--muted); font-size: .9rem; }
 
 button.primary {
   font: inherit;

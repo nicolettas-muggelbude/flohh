@@ -80,11 +80,41 @@
       </div>
     </section>
 
-    <!-- Beide: gekoppelt -->
+    <!-- Beide: gekoppelt, Umzug -->
     <section id="view-connected" class="panel" hidden>
       <h2 data-i18n="connected.title"></h2>
       <p id="connected-text"></p>
-      <p class="hint" data-i18n="connected.next"></p>
+
+      <!-- Sender: Ordner freigeben -->
+      <div id="send-share" hidden>
+        <h3 data-i18n="share.title"></h3>
+        <div id="share-list" class="folder-list"></div>
+        <div class="actions">
+          <button class="primary" id="share-button" data-i18n="share.button"></button>
+        </div>
+      </div>
+      <div id="share-status" hidden>
+        <p id="share-status-text" aria-live="polite"></p>
+        <div id="send-progress"></div>
+      </div>
+
+      <!-- Empfänger: Angebot wählen und abholen -->
+      <div id="recv-offer" hidden>
+        <h3 data-i18n="offer.title"></h3>
+        <p class="status" id="offer-wait"></p>
+        <div id="offer-list" class="folder-list"></div>
+        <div class="actions">
+          <button class="primary" id="start-button" data-i18n="offer.start"></button>
+        </div>
+      </div>
+      <div id="recv-progress" hidden>
+        <div id="recv-progress-box"></div>
+        <div class="actions">
+          <button class="quiet" id="stop-button" data-i18n="progress.stop"></button>
+          <button class="primary" id="again-button" data-i18n="progress.again" hidden></button>
+        </div>
+      </div>
+
       <div class="actions">
         <button class="quiet" data-action="reset" data-i18n="connected.disconnect"></button>
       </div>

@@ -40,8 +40,57 @@ const messages = {
 
     "connected.title": "Verbunden",
     "connected.text": "Verbunden mit {name} ({os}). Die Verbindung ist verschlüsselt.",
-    "connected.next": "Die Übertragung der Daten folgt im nächsten Schritt.",
+    "connected.title.send": "Verbunden – alter Rechner",
+    "connected.title.receive": "Verbunden – neuer Rechner",
     "connected.disconnect": "Trennen",
+
+    "folder.documents": "Dokumente",
+    "folder.pictures": "Bilder",
+    "folder.music": "Musik",
+    "folder.videos": "Videos",
+    "folder.desktop": "Schreibtisch",
+    "folder.downloads": "Downloads",
+    "folder.files": { one: "{count} Datei", other: "{count} Dateien" },
+    "folder.counting": "wird gezählt …",
+    "folder.target": "kommt nach {path}",
+
+    "share.title": "Was soll auf den neuen Rechner?",
+    "share.button": "Freigeben",
+    "share.waiting": "Freigegeben: {names}. Warte, bis der neue Rechner die Übertragung startet …",
+    "share.receiving": "Der neue Rechner holt die Daten ab:",
+    "share.finished": "Ergebnis beim neuen Rechner:",
+
+    "offer.title": "Der alte Rechner gibt diese Ordner frei:",
+    "offer.wait": "Warte, bis am alten Rechner Ordner freigegeben werden …",
+    "offer.start": "Übertragung starten",
+
+    "progress.listing": "Dateien werden aufgelistet …",
+    "progress.bytes": "{percent} · {done} von {total}",
+    "progress.files": "{done} von {total} Dateien",
+    "progress.eta": "Noch etwa {time} · {speed}/s",
+    "progress.stop": "Anhalten",
+    "progress.stopping": "Hält nach der aktuellen Datei an …",
+    "progress.again": "Erneut starten",
+    "progress.done": "Fertig! Alle Daten sind umgezogen.",
+    "progress.doneWithErrors": "Fertig – aber nicht alle Dateien ließen sich übertragen.",
+    "progress.summary": "{copied} kopiert · {skipped} schon vorhanden · {failed} Fehler",
+    "progress.cancelled": "Angehalten. Ein neuer Start setzt fort – was schon da ist, wird übersprungen.",
+    "progress.failed": "Abgebrochen: Die Verbindung zum anderen Rechner ist weg.",
+    "progress.failures": "Diese Dateien konnten nicht übertragen werden:",
+
+    "failure.read_failed": "auf dem alten Rechner nicht lesbar",
+    "failure.not_found": "auf dem alten Rechner nicht mehr vorhanden",
+    "failure.file_changed": "hat sich während der Übertragung geändert",
+    "failure.write_failed": "ließ sich hier nicht speichern",
+    "failure.invalid_path": "ungültiger Name",
+
+    "time.lessMinute": "unter 1 Minute",
+    "time.minutes": { one: "{count} Minute", other: "{count} Minuten" },
+    "time.hours": "{hours} Std. {minutes} Min.",
+
+    "error.not_connected": "Keine Verbindung zum anderen Rechner.",
+    "error.nothing_selected": "Bitte mindestens einen Ordner auswählen.",
+    "error.busy": "Die Übertragung läuft schon.",
 
     "error.bad_code": "Der Code hat 6 Ziffern.",
     "error.wrong_code": "Der Code stimmt nicht. Bitte noch einmal vom neuen Rechner ablesen.",
@@ -93,8 +142,12 @@ function t(key, params = {}) {
   if (typeof msg === "object") {
     msg = msg[pluralRules.select(params.count)] ?? msg.other;
   }
-  return msg.replace(/\{(\w+)\}/g, (m, name) =>
-    name in params ? String(params[name]) : m);
+  // Zahlen im Format der Sprache („1.234“), alles andere als Text.
+  return msg.replace(/\{(\w+)\}/g, (m, name) => {
+    if (!(name in params)) return m;
+    const v = params[name];
+    return typeof v === "number" ? formatNumber(v) : String(v);
+  });
 }
 
 // Übersetzt alle markierten Elemente unterhalb von root:

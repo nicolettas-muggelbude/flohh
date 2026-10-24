@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/move"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 )
 
@@ -31,7 +32,7 @@ func (f *fakeSession) Pair(context.Context, string, string) error { return f.pai
 func (f *fakeSession) Reset()                                     { f.role = "" }
 
 func TestGuard(t *testing.T) {
-	h := New("test", testHost, func() {}, &fakeSession{})
+	h := New("test", testHost, func() {}, &fakeSession{}, move.New())
 
 	// Tabellengetriebener Test: jede Zeile ist ein Fall.
 	cases := []struct {
@@ -70,7 +71,7 @@ func TestGuard(t *testing.T) {
 
 func TestQuit(t *testing.T) {
 	called := make(chan struct{})
-	h := New("test", testHost, func() { close(called) }, &fakeSession{})
+	h := New("test", testHost, func() { close(called) }, &fakeSession{}, move.New())
 
 	req := httptest.NewRequest("POST", "/api/quit", nil)
 	req.Host = testHost
@@ -95,7 +96,7 @@ func post(h http.Handler, path, body string) *httptest.ResponseRecorder {
 
 func TestRoleAndPair(t *testing.T) {
 	f := &fakeSession{pairErr: &peer.Error{Code: peer.ErrWrongCode}}
-	h := New("test", testHost, func() {}, f)
+	h := New("test", testHost, func() {}, f, move.New())
 
 	if rec := post(h, "/api/role", `{"role":"send"}`); rec.Code != http.StatusOK || f.role != peer.RoleSend {
 		t.Fatalf("Rolle: Status %d, Rolle %q", rec.Code, f.role)

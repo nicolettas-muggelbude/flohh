@@ -12,8 +12,10 @@ einen anderen kopiert – Windows, Linux und macOS in allen Richtungen. Heute pe
 LAN-Kabel, später auch über WLAN und Thunderbolt/USB4.
 
 **Status:** Meilenstein 2 läuft. Zwei Rechner finden sich im Netz (auch per
-direktem Kabel) und koppeln sich verschlüsselt per 6-stelligem Code. Die
-Übertragung der Daten folgt.
+direktem Kabel) und koppeln sich verschlüsselt per 6-stelligem Code. Der alte
+Rechner gibt Benutzerordner frei (Dokumente, Bilder, Musik, Videos,
+Schreibtisch, Downloads), der neue holt sie in seine eigenen Benutzerordner –
+mit Fortschritt, ohne etwas zu überschreiben, und fortsetzbar.
 
 ## Bauen
 
@@ -78,6 +80,11 @@ gofmt -l .            # nicht formatierte Dateien anzeigen
 ```
 cmd/flohh/          Einstieg, Befehle
 internal/peer/      Andere Rechner finden, verschlüsselt per Code koppeln
+internal/folders/   Benutzerordner je System (Dokumente, Bilder …)
+internal/transfer/  Übertragungsprotokoll: freigeben, auflisten, abholen
+internal/move/      Umzug: verbindet Kopplung, Ordner und Übertragung
+internal/stick/     Start vom USB-Stick: Kopie, damit der Stick frei bleibt
+internal/desktop/   Linux: Eintrag im Anwendungsmenü
 internal/ui/        HTTP-Server für Oberfläche und Steuer-Schnittstelle
 internal/browser/   Standardbrowser öffnen (Windows / macOS / Linux)
 web/                HTML, CSS, JS – per go:embed in die Datei gepackt

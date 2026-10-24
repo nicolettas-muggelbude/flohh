@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/nicolettas-muggelbude/flohh/internal/browser"
+	"github.com/nicolettas-muggelbude/flohh/internal/move"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/internal/stick"
 	"github.com/nicolettas-muggelbude/flohh/internal/ui"
@@ -108,8 +109,11 @@ func runGUI(args []string) error {
 
 	// Die Kopplung mit dem anderen Rechner. Sie wird erst im Netz aktiv,
 	// wenn in der Oberfläche eine Rolle gewählt wird.
+	// Nach dem Koppeln übernimmt der Umzug die Verbindung.
+	mv := move.New()
 	cfg := peer.DefaultConfig()
 	cfg.Logf = log.Printf // Hinweise zur Verbindung im Konsolenfenster
+	cfg.OnConnected = mv.Connected
 	session, err := peer.New(cfg)
 	if err != nil {
 		return fmt.Errorf("Netzwerk kann nicht vorbereitet werden: %w", err)
@@ -117,7 +121,7 @@ func runGUI(args []string) error {
 	defer session.Reset()
 
 	server := &http.Server{
-		Handler:           ui.New(version, addr, stop, session),
+		Handler:           ui.New(version, addr, stop, session, mv),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

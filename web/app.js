@@ -82,11 +82,202 @@ let pairing = false;       // Code wird gerade geprüft
 async function refresh() {
   try {
     state = await api("/api/state");
+    if (state.phase === "connected") move = await api("/api/move");
     render();
   } catch {
     // App beendet oder kurz nicht erreichbar – beim nächsten Mal wieder.
   }
 }
+
+// ---- Umzug: freigeben, abholen, Fortschritt ----
+
+const el = (id) => document.getElementById(id);
+let move = null;
+const shareSel = new Set();   // Sender: gewählte Ordnerarten
+const offerSel = new Set();   // Empfänger: gewählte Ordnerarten
+const offerSeen = new Set();  // Empfänger: schon einmal angebotene Arten
+let shareKey = "", offerKey = "";
+
+function resetMoveUI() {
+  move = null;
+  shareSel.clear(); offerSel.clear(); offerSeen.clear();
+  shareKey = offerKey = "";
+}
+
+function renderMove() {
+  if (!move || !move.connected) return;
+  const sender = move.role === "send";
+  document.querySelector("#view-connected h2").textContent = t(`connected.title.${move.role}`);
+  el("send-share").hidden = !sender || move.shared;
+  el("share-status").hidden = !sender || !move.shared;
+  el("recv-offer").hidden = sender || move.running || !!move.progress;
+  el("recv-progress").hidden = sender || (!move.running && !move.progress);
+  if (sender) renderSender(); else renderReceiver();
+}
+
+function renderSender() {
+  if (!move.shared) {
+    const key = JSON.stringify(move.folders);
+    if (key !== shareKey) {
+      if (!shareKey) move.folders.forEach((f) => shareSel.add(f.kind)); // anfangs alle
+      shareKey = key;
+      folderRows(el("share-list"), move.folders, shareSel, false);
+    }
+    el("share-button").disabled = !move.folders.length;
+    return;
+  }
+  const names = move.folders.filter((f) => f.shared).map((f) => t(`folder.${f.kind}`)).join(", ");
+  const p = move.progress;
+  const busy = p && (p.phase === "listing" || p.phase === "copying");
+  el("share-status-text").textContent =
+    !p ? t("share.waiting", { names }) : busy ? t("share.receiving") : t("share.finished");
+  renderProgress(el("send-progress"), move.progress, false);
+}
+
+function renderReceiver() {
+  for (const f of move.folders) {
+    if (!offerSeen.has(f.kind)) { offerSeen.add(f.kind); offerSel.add(f.kind); } // neu angeboten: gewählt
+  }
+  const key = JSON.stringify(move.folders);
+  if (key !== offerKey) {
+    offerKey = key;
+    folderRows(el("offer-list"), move.folders, offerSel, true);
+  }
+  el("offer-wait").textContent = move.folders.length ? "" : t("offer.wait");
+  el("start-button").disabled = !move.folders.length;
+  renderProgress(el("recv-progress-box"), move.progress, move.stopping);
+  el("stop-button").hidden = !move.running;
+  el("again-button").hidden = move.running;
+}
+
+function span(cls, text) {
+  const s = document.createElement("span");
+  s.className = cls;
+  s.textContent = text;
+  return s;
+}
+
+// folderRows zeichnet Ordner mit Häkchen; sel merkt sich die Auswahl.
+function folderRows(container, list, sel, showTarget) {
+  container.replaceChildren(...list.map((f) => {
+    const label = document.createElement("label");
+    label.className = "folder";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = sel.has(f.kind);
+    cb.addEventListener("change", () => (cb.checked ? sel.add(f.kind) : sel.delete(f.kind)));
+    const text = document.createElement("span");
+    text.className = "folder-text";
+    text.append(
+      span("folder-name", t(`folder.${f.kind}`)),
+      span("folder-path", showTarget ? t("folder.target", { path: f.path }) : f.path),
+    );
+    const size = f.ready
+      ? `${t("folder.files", { count: f.files })} · ${formatBytes(f.bytes)}`
+      : t("folder.counting");
+    label.append(cb, text, span("folder-size", size));
+    return label;
+  }));
+}
+
+function formatDuration(sec) {
+  if (sec < 60) return t("time.lessMinute");
+  const m = Math.round(sec / 60);
+  if (m < 60) return t("time.minutes", { count: m });
+  return t("time.hours", { hours: Math.floor(m / 60), minutes: m % 60 });
+}
+
+function failureText(code) {
+  const key = `failure.${code}`;
+  return (messages[lang][key] ?? messages[fallbackLang][key]) ? t(key) : code;
+}
+
+// renderProgress zeigt Balken, Zahlen, aktuelle Datei bzw. Ergebnis.
+function renderProgress(box, p, stopping) {
+  box.replaceChildren();
+  if (!p) return;
+  const add = (cls, text) => {
+    const e = document.createElement("p");
+    e.className = cls;
+    e.textContent = text;
+    box.append(e);
+  };
+  if (p.phase === "listing") {
+    add("status", t("progress.listing"));
+    return;
+  }
+  const frac = p.bytesTotal ? Math.min(1, p.bytesDone / p.bytesTotal) : (p.phase === "done" ? 1 : 0);
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.setAttribute("role", "progressbar");
+  bar.setAttribute("aria-valuemin", "0");
+  bar.setAttribute("aria-valuemax", "100");
+  bar.setAttribute("aria-valuenow", String(Math.round(frac * 100)));
+  const fill = document.createElement("div");
+  fill.className = "bar-fill";
+  fill.style.width = `${(frac * 100).toFixed(1)}%`;
+  bar.append(fill);
+  box.append(bar);
+
+  add("progress-line", t("progress.bytes", {
+    percent: formatNumber(frac, { style: "percent", maximumFractionDigits: 0 }),
+    done: formatBytes(p.bytesDone),
+    total: formatBytes(p.bytesTotal),
+  }));
+  add("progress-line", t("progress.files", {
+    done: p.filesDone + p.filesSkipped + p.filesFailed,
+    total: p.filesTotal,
+  }));
+
+  if (p.phase === "copying") {
+    const sec = (Date.now() - p.startedAt) / 1000;
+    if (sec > 3 && p.bytesDone > 0) {
+      const speed = p.bytesDone / sec;
+      add("progress-line muted", t("progress.eta", {
+        time: formatDuration((p.bytesTotal - p.bytesDone) / speed),
+        speed: formatBytes(speed),
+      }));
+    }
+    if (stopping) add("status", t("progress.stopping"));
+    if (p.current) add("current", p.current);
+    return;
+  }
+
+  const msg = {
+    done: p.filesFailed ? "progress.doneWithErrors" : "progress.done",
+    cancelled: "progress.cancelled",
+    failed: "progress.failed",
+  }[p.phase];
+  if (msg) add("result", t(msg));
+  add("progress-line", t("progress.summary", {
+    copied: p.filesDone, skipped: p.filesSkipped, failed: p.filesFailed,
+  }));
+  if (p.failures && p.failures.length) {
+    add("progress-line", t("progress.failures"));
+    const ul = document.createElement("ul");
+    ul.className = "failures";
+    for (const f of p.failures) {
+      const li = document.createElement("li");
+      li.textContent = `${f.path} – ${failureText(f.error)}`;
+      ul.append(li);
+    }
+    box.append(ul);
+  }
+}
+
+async function moveAction(path, data) {
+  try {
+    move = await post(path, data);
+    render();
+  } catch (err) {
+    toast(errorText(err.code));
+  }
+}
+
+el("share-button").addEventListener("click", () => moveAction("/api/move/share", { kinds: [...shareSel] }));
+el("start-button").addEventListener("click", () => moveAction("/api/move/start", { kinds: [...offerSel] }));
+el("again-button").addEventListener("click", () => moveAction("/api/move/start", { kinds: [...offerSel] }));
+el("stop-button").addEventListener("click", () => moveAction("/api/move/stop"));
 
 function show(view) {
   for (const v of ["home", "receive", "send", "connected"]) {
@@ -100,7 +291,11 @@ function render() {
     const p = state.partner;
     document.getElementById("connected-text").textContent =
       t("connected.text", { name: p.name, os: osName(p.os) });
-  } else if (state.role === "receive") {
+    renderMove();
+    return;
+  }
+  resetMoveUI();
+  if (state.role === "receive") {
     show("receive");
     renderReceive();
   } else if (state.role === "send") {

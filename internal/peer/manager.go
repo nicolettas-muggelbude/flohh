@@ -87,6 +87,10 @@ type Config struct {
 
 	// Logf schreibt Hinweise für die Fehlersuche (z. B. log.Printf); nil = still.
 	Logf func(format string, args ...any)
+
+	// OnConnected bekommt die gekoppelte, verschlüsselte Verbindung und
+	// arbeitet damit, bis sie endet (Rückkehr = Verbindung ist zu Ende).
+	OnConnected func(conn net.Conn, partner Peer, role Role)
 }
 
 func (m *Manager) logf(format string, args ...any) {
@@ -400,18 +404,23 @@ func (m *Manager) paired(c *tls.Conn, p *Peer) bool {
 		pc.Close()
 		delete(m.pending, id)
 	}
-	go m.watch(c)
+	go m.serve(c, partner, m.role)
 	return true
 }
 
-// watch merkt, wenn die Gegenseite die Verbindung trennt.
-// TODO(Meilenstein 2): Durch das Übertragungsprotokoll ersetzen.
-func (m *Manager) watch(c *tls.Conn) {
-	for {
-		if _, err := readFrame(c); err != nil {
-			break
+// serve übergibt die gekoppelte Verbindung an OnConnected (die Übertragung)
+// und merkt, wenn sie endet.
+func (m *Manager) serve(c *tls.Conn, partner Peer, role Role) {
+	if m.cfg.OnConnected != nil {
+		m.cfg.OnConnected(c, partner, role)
+	} else {
+		for {
+			if _, err := readFrame(c); err != nil {
+				break
+			}
 		}
 	}
+	c.Close()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.conn == c {

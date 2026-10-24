@@ -12,6 +12,8 @@ import (
 	"runtime"
 
 	"github.com/nicolettas-muggelbude/flohh/internal/desktop"
+	"github.com/nicolettas-muggelbude/flohh/internal/folders"
+	"github.com/nicolettas-muggelbude/flohh/internal/move"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/web"
 )
@@ -23,6 +25,14 @@ type Session interface {
 	SetRole(peer.Role) error
 	Pair(ctx context.Context, id, code string) error
 	Reset()
+}
+
+// Move ist der Umzug über die gekoppelte Verbindung (move.Coordinator).
+type Move interface {
+	State() move.State
+	Share([]folders.Kind) error
+	Start([]folders.Kind) error
+	Stop() error
 }
 
 // apiHeader muss jede ändernde Anfrage (POST usw.) mitschicken. Eine fremde
@@ -37,6 +47,7 @@ type server struct {
 	version string
 	quit    func() // beendet die App
 	session Session
+	move    Move
 }
 
 // New baut den HTTP-Handler der Oberfläche.
@@ -44,8 +55,8 @@ type server struct {
 // host ist die Adresse, unter der die Oberfläche läuft (z. B.
 // "127.0.0.1:53817"). Anfragen mit einem anderen Host-Header werden
 // abgelehnt; das schützt vor DNS-Rebinding-Angriffen.
-func New(version, host string, quit func(), session Session) http.Handler {
-	s := &server{version: version, quit: quit, session: session}
+func New(version, host string, quit func(), session Session, mv Move) http.Handler {
+	s := &server{version: version, quit: quit, session: session, move: mv}
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /", http.FileServerFS(web.Files))
@@ -56,6 +67,10 @@ func New(version, host string, quit func(), session Session) http.Handler {
 	mux.HandleFunc("POST /api/pair", s.handlePair)
 	mux.HandleFunc("POST /api/reset", s.handleReset)
 	mux.HandleFunc("POST /api/menu", s.handleMenu)
+	mux.HandleFunc("GET /api/move", s.handleMoveState)
+	mux.HandleFunc("POST /api/move/share", s.handleMoveKinds(mv.Share))
+	mux.HandleFunc("POST /api/move/start", s.handleMoveKinds(mv.Start))
+	mux.HandleFunc("POST /api/move/stop", s.handleMoveStop)
 
 	return guard(host, mux)
 }
@@ -176,6 +191,38 @@ func (s *server) handleReset(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, s.session.State())
 }
 
+func (s *server) handleMoveState(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.move.State())
+}
+
+// handleMoveKinds nimmt {"kinds": ["documents", …]} für Freigeben/Starten.
+func (s *server) handleMoveKinds(action func([]folders.Kind) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Kinds []folders.Kind `json:"kinds"`
+		}
+		if !readJSON(w, r, &req) {
+			return
+		}
+		for _, k := range req.Kinds {
+			if !folders.Valid(k) {
+				writeErrorCode(w, http.StatusBadRequest, "bad_request")
+				return
+			}
+		}
+		if err := action(req.Kinds); err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, s.move.State())
+	}
+}
+
+func (s *server) handleMoveStop(w http.ResponseWriter, r *http.Request) {
+	s.move.Stop() // läuft nichts, ist auch gut
+	writeJSON(w, s.move.State())
+}
+
 func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
@@ -189,8 +236,12 @@ func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 func writeError(w http.ResponseWriter, err error) {
 	code := "internal"
 	var pe *peer.Error
-	if errors.As(err, &pe) {
+	var me *move.Error
+	switch {
+	case errors.As(err, &pe):
 		code = pe.Code
+	case errors.As(err, &me):
+		code = me.Code
 	}
 	writeErrorCode(w, http.StatusConflict, code)
 }
