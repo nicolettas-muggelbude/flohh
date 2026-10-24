@@ -34,7 +34,8 @@ type Progress struct {
 	FilesSkipped int       `json:"filesSkipped"`
 	FilesFailed  int       `json:"filesFailed"`
 	BytesTotal   int64     `json:"bytesTotal"`
-	BytesDone    int64     `json:"bytesDone"` // inkl. übersprungener
+	BytesDone    int64     `json:"bytesDone"`   // inkl. übersprungener
+	BytesCopied  int64     `json:"bytesCopied"` // nur wirklich übertragene (für das Tempo)
 	Current      string    `json:"current,omitempty"`
 	Error        string    `json:"error,omitempty"`
 	Failures     []Failure `json:"failures,omitempty"`
@@ -221,7 +222,10 @@ type progressWriter struct {
 
 func (w progressWriter) Write(p []byte) (int, error) {
 	n, err := w.f.Write(p)
-	w.e.update(func(pr *Progress) { pr.BytesDone += int64(n) })
+	w.e.update(func(pr *Progress) {
+		pr.BytesDone += int64(n)
+		pr.BytesCopied += int64(n)
+	})
 	return n, err
 }
 
