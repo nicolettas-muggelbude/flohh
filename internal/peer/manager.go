@@ -93,12 +93,19 @@ func (m *Manager) logf(format string, args ...any) {
 // DefaultConfig ist die Einstellung für den normalen Betrieb.
 func DefaultConfig() Config {
 	name, _ := os.Hostname()
+	listen := runtime.GOOS != "windows"
+	discovery := DiscoveryPort
+	if !listen {
+		// Windows belegt keinen festen Port – sonst fragt die Firewall nach.
+		// Es bekommt die Gegenseite über deren Antworten auf seine Rundrufe.
+		discovery = 0
+	}
 	return Config{
 		Name:          name,
 		OS:            runtime.GOOS,
-		DiscoveryPort: DiscoveryPort,
+		DiscoveryPort: discovery,
 		ConnectPort:   ConnectPort,
-		Listen:        runtime.GOOS != "windows",
+		Listen:        listen,
 	}
 }
 
