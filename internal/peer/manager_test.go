@@ -22,16 +22,42 @@ func loopback(m **Manager) func() []*net.UDPAddr {
 	}
 }
 
+// loopback6 dasselbe über IPv6 (::1).
+func loopback6(m **Manager) func() []*net.UDPAddr {
+	return func() []*net.UDPAddr {
+		(*m).mu.Lock()
+		defer (*m).mu.Unlock()
+		if (*m).udp6Addr == nil {
+			return nil
+		}
+		return []*net.UDPAddr{{IP: net.IPv6loopback, Port: (*m).udp6Addr.Port}}
+	}
+}
+
+func none() []*net.UDPAddr { return nil }
+
 // setup baut Sender ("alt") und Empfänger ("neu"), die sich nur gegenseitig
-// rufen. Wie im echten Betrieb nimmt die Windows-Seite keine Verbindungen an.
+// über IPv4 rufen. Wie im echten Betrieb nimmt die Windows-Seite keine
+// Verbindungen an.
 func setup(t *testing.T, sendOS, recvOS string) (s, r *Manager) {
 	t.Helper()
+	return setupWith(t, sendOS, recvOS, func(other **Manager) (v4, v6 func() []*net.UDPAddr) {
+		return loopback(other), none
+	})
+}
+
+type targetsFor func(other **Manager) (v4, v6 func() []*net.UDPAddr)
+
+func setupWith(t *testing.T, sendOS, recvOS string, tf targetsFor) (s, r *Manager) {
+	t.Helper()
 	var err error
-	s, err = New(Config{Name: "alt", OS: sendOS, Listen: sendOS != "windows", Targets: loopback(&r)})
+	s4, s6 := tf(&r)
+	s, err = New(Config{Name: "alt", OS: sendOS, Listen: sendOS != "windows", Targets: s4, Targets6: s6})
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err = New(Config{Name: "neu", OS: recvOS, Listen: recvOS != "windows", Targets: loopback(&s)})
+	r4, r6 := tf(&s)
+	r, err = New(Config{Name: "neu", OS: recvOS, Listen: recvOS != "windows", Targets: r4, Targets6: r6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,6 +152,41 @@ func TestPairing(t *testing.T) {
 				return st.Phase == PhaseIdle && st.Error == ErrPeerGone
 			})
 		})
+	}
+}
+
+// Direktes Kabel, IPv4 in verschiedenen Bereichen: Gefunden und verbunden
+// wird nur über IPv6.
+func TestPairingIPv6Only(t *testing.T) {
+	for _, c := range []struct{ sendOS, recvOS string }{{"windows", "linux"}, {"linux", "windows"}} {
+		t.Run(c.sendOS+" zu "+c.recvOS, func(t *testing.T) {
+			s, r := setupWith(t, c.sendOS, c.recvOS, func(other **Manager) (v4, v6 func() []*net.UDPAddr) {
+				return none, loopback6(other)
+			})
+			if s.udp6Addr == nil {
+				t.Skip("kein IPv6 auf diesem Rechner")
+			}
+			p := waitPeer(t, s)
+			if err := s.Pair(context.Background(), p.ID, r.State().Code); err != nil {
+				t.Fatalf("Kopplung über IPv6: %v", err)
+			}
+			eventually(t, "Empfänger verbunden", func() bool { return r.State().Phase == PhaseConnected })
+		})
+	}
+}
+
+// Der Fall vom Testlauf: Die IPv4-Adresse der Gegenseite ist nicht
+// erreichbar. flohh muss die nächste Adresse probieren.
+func TestDialFallsBackToNextAddress(t *testing.T) {
+	s, r := setup(t, "windows", "linux")
+	p := waitPeer(t, s)
+	s.mu.Lock()
+	real := s.peers[p.ID].addrs[0]
+	// Unerreichbare Adresse vorne einfügen (192.0.2.0/24 ist für Doku reserviert).
+	s.peers[p.ID].addrs = []string{"192.0.2.1:9", real}
+	s.mu.Unlock()
+	if err := s.Pair(context.Background(), p.ID, r.State().Code); err != nil {
+		t.Fatalf("Kopplung: %v", err)
 	}
 }
 

@@ -105,6 +105,21 @@ func (d *discovery) readLoop() {
 	}
 }
 
+// multicastTargets6 liefert für jede aktive Schnittstelle die IPv6-Adresse
+// „alle Geräte an dieser Leitung“ (ff02::1). Darüber finden sich zwei
+// Rechner am selben Kabel immer – egal, wie IPv4 eingestellt ist.
+func multicastTargets6(port int) []*net.UDPAddr {
+	var out []*net.UDPAddr
+	ifaces, _ := net.Interfaces()
+	for _, ifc := range ifaces {
+		if ifc.Flags&net.FlagUp == 0 || ifc.Flags&net.FlagMulticast == 0 || ifc.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		out = append(out, &net.UDPAddr{IP: net.IPv6linklocalallnodes, Port: port, Zone: ifc.Name})
+	}
+	return out
+}
+
 // broadcastTargets liefert die Rundruf-Adressen aller aktiven Schnittstellen.
 // Dazu gehört bei direktem Kabel ohne Router auch 169.254.255.255.
 func broadcastTargets(port int) []*net.UDPAddr {

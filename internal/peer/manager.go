@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,8 +50,10 @@ type Peer struct {
 	OS   string `json:"os"`
 	Role Role   `json:"role"`
 
-	addr string // IP:TCP-Port, leer = nimmt keine Verbindungen an
-	seen time.Time
+	// addrs: alle Adressen (IP:TCP-Port), unter denen die Gegenseite gehört
+	// wurde – IPv4 und IPv6 link-local. Leer = nimmt keine Verbindungen an.
+	addrs []string
+	seen  time.Time
 }
 
 // State ist der Stand, den die Oberfläche anzeigt.
@@ -77,8 +80,10 @@ type Config struct {
 	// Firewall-Abfrage. Windows baut Verbindungen selbst auf (senderDials).
 	Listen bool
 
-	// Targets liefert die Ziele für Rundrufe; nil = alle Schnittstellen.
-	Targets func() []*net.UDPAddr
+	// Targets liefert die Ziele für Rundrufe über IPv4, Targets6 über IPv6;
+	// nil = alle Schnittstellen.
+	Targets  func() []*net.UDPAddr
+	Targets6 func() []*net.UDPAddr
 
 	// Logf schreibt Hinweise für die Fehlersuche (z. B. log.Printf); nil = still.
 	Logf func(format string, args ...any)
@@ -135,7 +140,8 @@ type Manager struct {
 	pending  map[string]*tls.Conn // Sender: Anrufe von Empfängern, warten auf den Code
 	dialing  map[string]bool      // Empfänger: laufende Anrufe
 	tcpPort  int                  // tatsächlicher TCP-Port, 0 = kein Listener
-	udpAddr  *net.UDPAddr         // tatsächliche UDP-Adresse (für Tests)
+	udpAddr  *net.UDPAddr         // tatsächliche UDP-Adresse IPv4 (für Tests)
+	udp6Addr *net.UDPAddr         // dito IPv6, nil = kein IPv6
 	ctx      context.Context      // lebt so lange wie die Rolle
 	cancel   context.CancelFunc
 }
@@ -186,15 +192,23 @@ func (m *Manager) SetRole(role Role) error {
 	m.Reset()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	udp, err := listenUDP(m.cfg.DiscoveryPort)
+	udp, err := listenUDP("udp4", m.cfg.DiscoveryPort)
 	if err != nil {
 		cancel()
 		return &Error{ErrNetwork}
 	}
+	// IPv6 link-local trägt die Verbindung, wenn beide Seiten per Kabel
+	// verbunden sind, aber unterschiedliche IPv4-Bereiche haben (z. B.
+	// 169.254.x.x und eine fest eingestellte 192.168.x.x). Ohne IPv6 geht
+	// es eben nur über IPv4.
+	udp6, err6 := listenUDP("udp6", m.cfg.DiscoveryPort)
 	var ln net.Listener
 	if m.cfg.Listen {
 		if ln, err = listenTCP(m.cfg.ConnectPort); err != nil {
 			udp.Close()
+			if udp6 != nil {
+				udp6.Close()
+			}
 			cancel()
 			return &Error{ErrNetwork}
 		}
@@ -207,6 +221,10 @@ func (m *Manager) SetRole(role Role) error {
 	m.dialing = map[string]bool{}
 	m.ctx, m.cancel = ctx, cancel
 	m.udpAddr = udp.LocalAddr().(*net.UDPAddr)
+	m.udp6Addr = nil
+	if err6 == nil {
+		m.udp6Addr = udp6.LocalAddr().(*net.UDPAddr)
+	}
 	m.tcpPort = 0
 	if ln != nil {
 		m.tcpPort = ln.Addr().(*net.TCPAddr).Port
@@ -218,7 +236,11 @@ func (m *Manager) SetRole(role Role) error {
 	if m.tcpPort != 0 {
 		tcpInfo = strconv.Itoa(m.tcpPort)
 	}
-	m.logf("Rolle %s: Suche über UDP-Port %d, TCP-Port %s", role, m.udpAddr.Port, tcpInfo)
+	v6Info := "aus"
+	if err6 == nil {
+		v6Info = "an"
+	}
+	m.logf("Rolle %s: Suche über UDP-Port %d (IPv6 %s), TCP-Port %s", role, m.udpAddr.Port, v6Info, tcpInfo)
 	m.mu.Unlock()
 
 	if ln != nil {
@@ -229,8 +251,14 @@ func (m *Manager) SetRole(role Role) error {
 	if targets == nil {
 		targets = func() []*net.UDPAddr { return broadcastTargets(DiscoveryPort) }
 	}
-	d := &discovery{conn: udp, targets: targets, self: m.beacon, found: m.found}
-	go d.run(ctx)
+	go (&discovery{conn: udp, targets: targets, self: m.beacon, found: m.found}).run(ctx)
+	if err6 == nil {
+		targets6 := m.cfg.Targets6
+		if targets6 == nil {
+			targets6 = func() []*net.UDPAddr { return multicastTargets6(DiscoveryPort) }
+		}
+		go (&discovery{conn: udp6, targets: targets6, self: m.beacon, found: m.found}).run(ctx)
+	}
 	go m.pruneLoop(ctx)
 	return nil
 }
@@ -276,7 +304,7 @@ func (m *Manager) Pair(ctx context.Context, id, code string) error {
 		m.mu.Unlock()
 		return &Error{ErrPeerGone}
 	}
-	peer := *p
+	peer := p.clone()
 	m.phase, m.errCode = PhasePairing, ""
 	m.mu.Unlock()
 
@@ -305,14 +333,14 @@ func (m *Manager) Pair(ctx context.Context, id, code string) error {
 
 func (m *Manager) pairAsSender(ctx context.Context, p *Peer, code string) (*tls.Conn, error) {
 	if senderDials(m.cfg.OS, p.OS) {
-		if p.addr == "" {
+		if len(p.addrs) == 0 {
 			if m.cfg.OS == "windows" && p.OS == "windows" {
 				// TODO(Meilenstein 2): Firewall-Regel per UAC anlegen.
 				return nil, &Error{ErrBothWindows}
 			}
 			return nil, &Error{ErrConnectFailed}
 		}
-		c, err := m.dial(ctx, p.addr)
+		c, err := m.dialAny(ctx, p.addrs)
 		if err != nil {
 			return nil, err
 		}
@@ -411,26 +439,44 @@ func (m *Manager) found(b beacon, from *net.UDPAddr) {
 	if m.phase != PhaseSearching && m.phase != PhasePairing {
 		return
 	}
-	p := &Peer{ID: b.ID, Name: b.Name, OS: b.OS, Role: b.Role, seen: time.Now()}
+	// Dieselbe Gegenseite kann über IPv4 und IPv6 rufen: alle Adressen sammeln.
+	p := m.peers[b.ID]
+	if p == nil {
+		p = &Peer{ID: b.ID}
+		m.peers[b.ID] = p
+		m.logf("Gefunden: %s (%s, Rolle %s) über %s", b.Name, b.OS, b.Role, hostOf(from))
+	}
+	p.Name, p.OS, p.Role, p.seen = b.Name, b.OS, b.Role, time.Now()
 	if b.Port != 0 {
-		p.addr = net.JoinHostPort(from.IP.String(), strconv.Itoa(b.Port))
-	}
-	if _, known := m.peers[b.ID]; !known {
-		addr := p.addr
-		if addr == "" {
-			addr = from.IP.String() + " (nimmt keine Verbindungen an)"
+		addr := net.JoinHostPort(hostOf(from), strconv.Itoa(b.Port))
+		if !slices.Contains(p.addrs, addr) {
+			p.addrs = append(p.addrs, addr)
+			m.logf("%s ist erreichbar unter %s", b.Name, addr)
 		}
-		m.logf("Gefunden: %s (%s, Rolle %s) unter %s", b.Name, b.OS, b.Role, addr)
 	}
-	m.peers[b.ID] = p
 
 	// Windows-Empfänger: Der Sender kann uns nicht erreichen, also rufen wir
 	// ihn an. Die Kopplung wartet dann, bis dort der Code eingetippt ist.
 	if m.role == RoleReceive && b.Role == RoleSend && !senderDials(b.OS, m.cfg.OS) &&
-		p.addr != "" && !m.dialing[b.ID] {
+		len(p.addrs) > 0 && !m.dialing[b.ID] {
 		m.dialing[b.ID] = true
-		go m.dialAsReceiver(m.ctx, *p)
+		go m.dialAsReceiver(m.ctx, p.clone())
 	}
+}
+
+func (p *Peer) clone() Peer {
+	c := *p
+	c.addrs = slices.Clone(p.addrs)
+	return c
+}
+
+// hostOf liefert die IP des Absenders, bei IPv6 link-local mit Schnittstelle
+// („fe80::1%eth0“) – ohne sie weiß das System nicht, über welches Kabel.
+func hostOf(a *net.UDPAddr) string {
+	if a.Zone != "" {
+		return a.IP.String() + "%" + a.Zone
+	}
+	return a.IP.String()
 }
 
 func (m *Manager) dialAsReceiver(ctx context.Context, p Peer) {
@@ -439,7 +485,7 @@ func (m *Manager) dialAsReceiver(ctx context.Context, p Peer) {
 		delete(m.dialing, p.ID) // beim nächsten Rundruf erneut versuchen
 		m.mu.Unlock()
 	}()
-	c, err := m.dial(ctx, p.addr)
+	c, err := m.dialAny(ctx, p.addrs)
 	if err != nil {
 		return
 	}
@@ -543,9 +589,38 @@ func (m *Manager) countFailure(err error) {
 	}
 }
 
+// dialAny probiert alle Adressen der Gegenseite der Reihe nach, IPv4 zuerst.
+// Eine IPv4-Adresse aus einem fremden Bereich scheitert sofort; dann trägt
+// IPv6 link-local.
+func (m *Manager) dialAny(ctx context.Context, addrs []string) (*tls.Conn, error) {
+	ordered := slices.Clone(addrs)
+	slices.SortStableFunc(ordered, func(a, b string) int {
+		return boolInt(strings.HasPrefix(a, "[")) - boolInt(strings.HasPrefix(b, "["))
+	})
+	var lastErr error = &Error{ErrConnectFailed}
+	for _, a := range ordered {
+		c, err := m.dial(ctx, a)
+		if err == nil {
+			return c, nil
+		}
+		lastErr = err
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return nil, lastErr
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func (m *Manager) dial(ctx context.Context, addr string) (*tls.Conn, error) {
 	m.logf("Verbinde mit %s …", addr)
-	d := net.Dialer{Timeout: 5 * time.Second}
+	d := net.Dialer{Timeout: 4 * time.Second}
 	raw, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		m.logf("Verbindung zu %s fehlgeschlagen: %v (blockt dort eine Firewall?)", addr, err)
@@ -591,18 +666,19 @@ func (m *Manager) pruneLoop(ctx context.Context) {
 // listenUDP öffnet den Rundruf-Port. Ist er belegt (z. B. zweite Instanz auf
 // demselben Rechner), nimmt sie einen beliebigen – dann kommen nur Antworten
 // an, das reicht zum Finden.
-func listenUDP(port int) (*net.UDPConn, error) {
-	c, err := net.ListenUDP("udp4", &net.UDPAddr{Port: port})
+func listenUDP(network string, port int) (*net.UDPConn, error) {
+	c, err := net.ListenUDP(network, &net.UDPAddr{Port: port})
 	if err != nil && port != 0 {
-		c, err = net.ListenUDP("udp4", &net.UDPAddr{})
+		c, err = net.ListenUDP(network, &net.UDPAddr{})
 	}
 	return c, err
 }
 
+// listenTCP nimmt Verbindungen über IPv4 und IPv6 an.
 func listenTCP(port int) (net.Listener, error) {
-	ln, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil && port != 0 {
-		ln, err = net.Listen("tcp4", ":0")
+		ln, err = net.Listen("tcp", ":0")
 	}
 	return ln, err
 }
