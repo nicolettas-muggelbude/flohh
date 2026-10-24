@@ -11,8 +11,8 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/browse"
 	"github.com/nicolettas-muggelbude/flohh/internal/desktop"
-	"github.com/nicolettas-muggelbude/flohh/internal/folders"
 	"github.com/nicolettas-muggelbude/flohh/internal/move"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/web"
@@ -30,8 +30,11 @@ type Session interface {
 // Move ist der Umzug über die gekoppelte Verbindung (move.Coordinator).
 type Move interface {
 	State() move.State
-	Share([]folders.Kind) error
-	Start([]folders.Kind) error
+	Share(ids []string) error
+	Start(ids []string) error
+	AddFolder(path string) (string, error)
+	RemoveFolder(id string) error
+	SetTarget(id, path string) error
 	Stop() error
 }
 
@@ -68,9 +71,13 @@ func New(version, host string, quit func(), session Session, mv Move) http.Handl
 	mux.HandleFunc("POST /api/reset", s.handleReset)
 	mux.HandleFunc("POST /api/menu", s.handleMenu)
 	mux.HandleFunc("GET /api/move", s.handleMoveState)
-	mux.HandleFunc("POST /api/move/share", s.handleMoveKinds(mv.Share))
-	mux.HandleFunc("POST /api/move/start", s.handleMoveKinds(mv.Start))
+	mux.HandleFunc("POST /api/move/share", s.handleMoveIDs(mv.Share))
+	mux.HandleFunc("POST /api/move/start", s.handleMoveIDs(mv.Start))
 	mux.HandleFunc("POST /api/move/stop", s.handleMoveStop)
+	mux.HandleFunc("POST /api/move/add", s.handleMoveAdd)
+	mux.HandleFunc("POST /api/move/remove", s.handleMoveRemove)
+	mux.HandleFunc("POST /api/move/target", s.handleMoveTarget)
+	mux.HandleFunc("GET /api/browse", s.handleBrowse)
 
 	return guard(host, mux)
 }
@@ -195,27 +202,77 @@ func (s *server) handleMoveState(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, s.move.State())
 }
 
-// handleMoveKinds nimmt {"kinds": ["documents", …]} für Freigeben/Starten.
-func (s *server) handleMoveKinds(action func([]folders.Kind) error) http.HandlerFunc {
+// handleMoveIDs nimmt {"ids": ["documents", "custom-1", …]} für
+// Freigeben bzw. Starten.
+func (s *server) handleMoveIDs(action func([]string) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Kinds []folders.Kind `json:"kinds"`
+			IDs []string `json:"ids"`
 		}
 		if !readJSON(w, r, &req) {
 			return
 		}
-		for _, k := range req.Kinds {
-			if !folders.Valid(k) {
-				writeErrorCode(w, http.StatusBadRequest, "bad_request")
-				return
-			}
-		}
-		if err := action(req.Kinds); err != nil {
+		if err := action(req.IDs); err != nil {
 			writeError(w, err)
 			return
 		}
 		writeJSON(w, s.move.State())
 	}
+}
+
+// handleMoveAdd: eigener Ordner beim Sender; Antwort mit seiner ID.
+func (s *server) handleMoveAdd(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path string `json:"path"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	id, err := s.move.AddFolder(req.Path)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, map[string]any{"id": id, "move": s.move.State()})
+}
+
+func (s *server) handleMoveRemove(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID string `json:"id"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if err := s.move.RemoveFolder(req.ID); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, s.move.State())
+}
+
+func (s *server) handleMoveTarget(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID   string `json:"id"`
+		Path string `json:"path"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if err := s.move.SetTarget(req.ID, req.Path); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, s.move.State())
+}
+
+// handleBrowse: Ordnerauswahl auf diesem Rechner (?path=…, leer = home).
+func (s *server) handleBrowse(w http.ResponseWriter, r *http.Request) {
+	l, err := browse.List(r.URL.Query().Get("path"))
+	if err != nil {
+		writeErrorCode(w, http.StatusConflict, "browse_failed")
+		return
+	}
+	writeJSON(w, l)
 }
 
 func (s *server) handleMoveStop(w http.ResponseWriter, r *http.Request) {

@@ -1,13 +1,17 @@
 // Package move verbindet Kopplung und Übertragung zu einem Umzug: Der alte
-// Rechner gibt Benutzerordner frei, der neue holt sie in seine eigenen
-// Benutzerordner ab. Die Oberfläche fragt den Stand über State ab.
+// Rechner gibt Benutzerordner und eigene Ordner frei, der neue holt sie in
+// seine Benutzerordner bzw. in selbst gewählte Ziele ab. Die Oberfläche
+// fragt den Stand über State ab.
 package move
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,9 +23,11 @@ import (
 // Fehlercodes für die Oberfläche.
 const (
 	ErrNotConnected = "not_connected"
-	ErrWrongRole    = "wrong_role"
 	ErrNothing      = "nothing_selected"
 	ErrBusy         = "busy"
+	ErrBadFolder    = "bad_folder" // kein Ordner / nicht lesbar
+	ErrDuplicate    = "duplicate"  // schon in der Liste
+	ErrBadTarget    = "bad_target" // Ziel ungültig
 )
 
 // Error ist ein Fehler mit Code für die Oberfläche.
@@ -29,14 +35,19 @@ type Error struct{ Code string }
 
 func (e *Error) Error() string { return e.Code }
 
-// Folder ist ein Benutzerordner in der Anzeige.
+// Folder ist ein Ordner in der Anzeige.
 type Folder struct {
-	Kind   folders.Kind `json:"kind"`
-	Path   string       `json:"path,omitempty"`   // Sender: Quelle; Empfänger: Ziel
-	Files  int          `json:"files"`            //
-	Bytes  int64        `json:"bytes"`            //
-	Ready  bool         `json:"ready"`            // Zählung fertig
-	Shared bool         `json:"shared,omitempty"` // Sender: freigegeben
+	ID      string       `json:"id"`             // Art (documents …) oder custom-N
+	Kind    folders.Kind `json:"kind,omitempty"` // leer bei eigenen Ordnern
+	Name    string       `json:"name,omitempty"` // Ordnername bei eigenen Ordnern
+	Source  string       `json:"source"`         // Pfad auf dem alten Rechner
+	Target  string       `json:"target,omitempty"`
+	Files   int          `json:"files"`
+	Bytes   int64        `json:"bytes"`
+	Ready   bool         `json:"ready"`             // Zählung fertig
+	Shared  bool         `json:"shared,omitempty"`  // Sender: freigegeben
+	Custom  bool         `json:"custom,omitempty"`  // eigener Ordner
+	AppData bool         `json:"appdata,omitempty"` // Programmeinstellungen von Windows
 }
 
 // State ist der Stand für die Oberfläche.
@@ -55,10 +66,12 @@ type Coordinator struct {
 	mu       sync.Mutex
 	conn     net.Conn
 	role     peer.Role
-	local    []Folder // Sender: gezählte eigene Ordner
+	local    []Folder // Sender: Benutzerordner und eigene Ordner
+	nextID   int      // Sender: Zähler für custom-N
 	server   *transfer.Server
 	client   *transfer.Client
-	offer    []transfer.Root // Empfänger: zuletzt gesehenes Angebot
+	offer    []transfer.Root   // Empfänger: zuletzt gesehenes Angebot
+	targets  map[string]string // Empfänger: selbst gewählte Ziele
 	engine   *transfer.Engine
 	running  bool
 	stop     context.CancelFunc
@@ -74,6 +87,7 @@ func (c *Coordinator) Connected(conn net.Conn, _ peer.Peer, role peer.Role) {
 	c.mu.Lock()
 	c.conn, c.role = conn, role
 	c.local, c.offer, c.lastProg, c.stopping = nil, nil, nil, false
+	c.targets, c.nextID = map[string]string{}, 0
 	c.mu.Unlock()
 
 	if role == peer.RoleSend {
@@ -81,7 +95,7 @@ func (c *Coordinator) Connected(conn net.Conn, _ peer.Peer, role peer.Role) {
 		c.mu.Lock()
 		c.server = srv
 		c.mu.Unlock()
-		go c.countLocal()
+		c.addKnown()
 		srv.Serve(conn) // bis der Empfänger auflegt
 	} else {
 		cl := transfer.NewClient(conn)
@@ -100,23 +114,81 @@ func (c *Coordinator) Connected(conn net.Conn, _ peer.Peer, role peer.Role) {
 	c.mu.Unlock()
 }
 
-// countLocal zählt beim Sender die eigenen Benutzerordner für die Anzeige.
-func (c *Coordinator) countLocal() {
-	known := folders.Known()
+// addKnown nimmt beim Sender die Benutzerordner in die Liste auf.
+func (c *Coordinator) addKnown() {
 	c.mu.Lock()
-	c.local = make([]Folder, len(known))
-	for i, f := range known {
-		c.local[i] = Folder{Kind: f.Kind, Path: f.Path}
+	defer c.mu.Unlock()
+	for _, f := range folders.Known() {
+		c.local = append(c.local, Folder{ID: string(f.Kind), Kind: f.Kind, Source: f.Path})
+		go c.count(string(f.Kind), f.Path)
 	}
-	c.mu.Unlock()
-	for i, f := range known {
-		files, bytes := transfer.Count(f.Path)
-		c.mu.Lock()
-		if i < len(c.local) && c.local[i].Kind == f.Kind {
+}
+
+// count zählt einen Ordner des Senders im Hintergrund.
+func (c *Coordinator) count(id, path string) {
+	files, bytes := transfer.Count(path)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i := range c.local {
+		if c.local[i].ID == id {
 			c.local[i].Files, c.local[i].Bytes, c.local[i].Ready = files, bytes, true
 		}
-		c.mu.Unlock()
 	}
+}
+
+// AddFolder nimmt beim Sender einen eigenen Ordner in die Liste auf.
+func (c *Coordinator) AddFolder(path string) (string, error) {
+	path = filepath.Clean(path)
+	if fi, err := os.Stat(path); err != nil || !fi.IsDir() || !filepath.IsAbs(path) {
+		return "", &Error{ErrBadFolder}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.server == nil {
+		return "", &Error{ErrNotConnected}
+	}
+	for _, f := range c.local {
+		if f.Source == path {
+			return "", &Error{ErrDuplicate}
+		}
+	}
+	c.nextID++
+	id := fmt.Sprintf("custom-%d", c.nextID)
+	c.local = append(c.local, Folder{ID: id, Name: folderName(path), Source: path, Custom: true})
+	go c.count(id, path)
+	return id, nil
+}
+
+// RemoveFolder nimmt einen eigenen Ordner wieder aus der Liste.
+func (c *Coordinator) RemoveFolder(id string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i, f := range c.local {
+		if f.ID == id && f.Custom {
+			c.local = append(c.local[:i], c.local[i+1:]...)
+			return nil
+		}
+	}
+	return &Error{ErrBadFolder}
+}
+
+// folderName: „C:\Projekte“ → „Projekte“, „D:\“ → „D“, „/“ → „root“.
+// (Daten, kein Anzeigetext – der Name wird auch Ordnername beim Ziel.)
+func folderName(path string) string {
+	name := filepath.Base(path)
+	if name == string(filepath.Separator) || name == "." || name == "" {
+		if vol := strings.TrimSuffix(filepath.VolumeName(path), ":"); vol != "" {
+			return vol
+		}
+		return "root"
+	}
+	return name
+}
+
+// isAppData erkennt Programmeinstellungen von Windows (…\AppData\…).
+func isAppData(path string) bool {
+	p := strings.ToLower(strings.ReplaceAll(path, `\`, "/"))
+	return strings.HasSuffix(p, "/appdata") || strings.Contains(p, "/appdata/")
 }
 
 // pollOffer fragt beim Empfänger alle 2 Sekunden das Angebot des Senders ab.
@@ -134,6 +206,26 @@ func (c *Coordinator) pollOffer(cl *transfer.Client) {
 	}
 }
 
+// defaultTarget: Benutzerordner landen im eigenen Benutzerordner gleicher
+// Art, eigene Ordner in einem gleichnamigen Ordner im persönlichen Ordner.
+func defaultTarget(r transfer.Root) string {
+	if k := folders.Kind(r.ID); folders.Valid(k) {
+		return folders.Path(k)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, transfer.SafeName(r.Name))
+}
+
+func (c *Coordinator) target(r transfer.Root) string {
+	if t, ok := c.targets[r.ID]; ok {
+		return t
+	}
+	return defaultTarget(r)
+}
+
 // State liefert den Stand für die Oberfläche.
 func (c *Coordinator) State() State {
 	c.mu.Lock()
@@ -146,7 +238,8 @@ func (c *Coordinator) State() State {
 			shared[r.ID] = true
 		}
 		for _, f := range c.local {
-			f.Shared = shared[string(f.Kind)]
+			f.Shared = shared[f.ID]
+			f.AppData = isAppData(f.Source)
 			s.Folders = append(s.Folders, f)
 		}
 		s.Shared = len(shared) > 0
@@ -155,8 +248,14 @@ func (c *Coordinator) State() State {
 		}
 	case c.role == peer.RoleReceive:
 		for _, r := range c.offer {
-			k := folders.Kind(r.ID)
-			s.Folders = append(s.Folders, Folder{Kind: k, Path: folders.Path(k), Files: r.Files, Bytes: r.Bytes, Ready: r.Ready})
+			f := Folder{ID: r.ID, Name: r.Name, Source: r.Source, Target: c.target(r),
+				Files: r.Files, Bytes: r.Bytes, Ready: r.Ready, AppData: isAppData(r.Source)}
+			if k := folders.Kind(r.ID); folders.Valid(k) {
+				f.Kind = k
+			} else {
+				f.Custom = true
+			}
+			s.Folders = append(s.Folders, f)
 		}
 		if c.engine != nil {
 			p := c.engine.Progress()
@@ -169,30 +268,43 @@ func (c *Coordinator) State() State {
 }
 
 // Share gibt beim Sender die gewählten Ordner frei.
-func (c *Coordinator) Share(kinds []folders.Kind) error {
+func (c *Coordinator) Share(ids []string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.server == nil {
 		return &Error{ErrNotConnected}
 	}
-	ids, paths := []string{}, map[string]string{}
-	for _, k := range kinds {
+	var list []transfer.Share
+	for _, id := range ids {
 		for _, f := range c.local {
-			if f.Kind == k {
-				ids = append(ids, string(k))
-				paths[string(k)] = f.Path
+			if f.ID == id {
+				list = append(list, transfer.Share{ID: f.ID, Name: f.Name, Path: f.Source})
 			}
 		}
 	}
-	if len(ids) == 0 {
+	if len(list) == 0 {
 		return &Error{ErrNothing}
 	}
-	c.server.Share(ids, paths)
+	c.server.Share(list)
+	return nil
+}
+
+// SetTarget legt beim Empfänger das Ziel eines Ordners fest.
+func (c *Coordinator) SetTarget(id, path string) error {
+	if path == "" || !filepath.IsAbs(path) {
+		return &Error{ErrBadTarget}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.client == nil {
+		return &Error{ErrNotConnected}
+	}
+	c.targets[id] = filepath.Clean(path)
 	return nil
 }
 
 // Start beginnt beim Empfänger die Übertragung der gewählten Ordner.
-func (c *Coordinator) Start(kinds []folders.Kind) error {
+func (c *Coordinator) Start(ids []string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.client == nil {
@@ -202,19 +314,17 @@ func (c *Coordinator) Start(kinds []folders.Kind) error {
 		return &Error{ErrBusy}
 	}
 	var plans []transfer.Plan
-	for _, k := range kinds {
-		offered := false
+	for _, id := range ids {
 		for _, r := range c.offer {
-			offered = offered || r.ID == string(k)
+			if r.ID != id {
+				continue
+			}
+			target := c.target(r)
+			if target == "" || os.MkdirAll(target, 0o755) != nil {
+				return &Error{ErrBadTarget}
+			}
+			plans = append(plans, transfer.Plan{Root: r.ID, Target: target})
 		}
-		target := folders.Path(k)
-		if !offered || target == "" {
-			continue
-		}
-		if err := os.MkdirAll(target, 0o755); err != nil {
-			continue
-		}
-		plans = append(plans, transfer.Plan{Root: string(k), Target: target})
 	}
 	if len(plans) == 0 {
 		return &Error{ErrNothing}

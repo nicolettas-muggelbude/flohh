@@ -62,7 +62,7 @@ func TestTransfer(t *testing.T) {
 	write(t, filepath.Join(dst, "konflikt.txt"), []byte("eigene Datei, nicht überschreiben"), time.Now())
 
 	s := NewServer()
-	s.Share([]string{"documents"}, map[string]string{"documents": src})
+	s.Share([]Share{{ID: "documents", Path: src}})
 	roots := waitReady(t, s)
 	if roots[0].Files != 4 {
 		t.Errorf("Freigabe zählt %d Dateien, erwartet 4", roots[0].Files)
@@ -122,7 +122,7 @@ func TestNoEscape(t *testing.T) {
 	t.Cleanup(func() { os.Remove(filepath.Join(parent, "nachbar.txt")) })
 
 	s := NewServer()
-	s.Share([]string{"documents"}, map[string]string{"documents": root})
+	s.Share([]Share{{ID: "documents", Path: root}})
 	c := connect(t, s)
 
 	for _, p := range []string{"../nachbar.txt", "/etc/passwd", "raus/geheim.txt", `..\nachbar.txt`, ""} {

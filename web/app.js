@@ -41,6 +41,7 @@ function toast(text) {
 // Eigennamen – werden nicht übersetzt.
 const osNames = { windows: "Windows", linux: "Linux", darwin: "macOS" };
 const osName = (os) => osNames[os] || os;
+let infoOS = ""; // eigenes System, aus /api/info
 
 async function loadInfo() {
   const el = document.getElementById("info");
@@ -52,6 +53,7 @@ async function loadInfo() {
       arch: i.arch,
       version: i.version,
     });
+    infoOS = i.os;
     document.getElementById("menu-offer").hidden = !i.menu.offer;
     document.getElementById("firewall-hint").hidden = i.os !== "windows";
   } catch (err) {
@@ -93,15 +95,26 @@ async function refresh() {
 
 const el = (id) => document.getElementById(id);
 let move = null;
-const shareSel = new Set();   // Sender: gewählte Ordnerarten
-const offerSel = new Set();   // Empfänger: gewählte Ordnerarten
-const offerSeen = new Set();  // Empfänger: schon einmal angebotene Arten
+const shareSel = new Set();   // Sender: gewählte Ordner (IDs)
+const shareSeen = new Set();  // Sender: schon einmal gezeigte Ordner
+const offerSel = new Set();   // Empfänger: gewählte Ordner (IDs)
+const offerSeen = new Set();  // Empfänger: schon einmal angebotene Ordner
 let shareKey = "", offerKey = "";
 
 function resetMoveUI() {
   move = null;
-  shareSel.clear(); offerSel.clear(); offerSeen.clear();
+  shareSel.clear(); shareSeen.clear(); offerSel.clear(); offerSeen.clear();
   shareKey = offerKey = "";
+}
+
+// Anzeigename: Benutzerordner übersetzt, eigene Ordner mit ihrem Namen.
+const folderLabel = (f) => (f.kind ? t(`folder.${f.kind}`) : f.name);
+
+// Neue Ordner sind anfangs gewählt; danach zählt, was jemand anklickt.
+function selectNew(list, seen, sel) {
+  for (const f of list) {
+    if (!seen.has(f.id)) { seen.add(f.id); sel.add(f.id); }
+  }
 }
 
 function renderMove() {
@@ -117,16 +130,16 @@ function renderMove() {
 
 function renderSender() {
   if (!move.shared) {
+    selectNew(move.folders, shareSeen, shareSel);
     const key = JSON.stringify(move.folders);
     if (key !== shareKey) {
-      if (!shareKey) move.folders.forEach((f) => shareSel.add(f.kind)); // anfangs alle
       shareKey = key;
-      folderRows(el("share-list"), move.folders, shareSel, false);
+      folderRows(el("share-list"), move.folders, shareSel, "share");
     }
     el("share-button").disabled = !move.folders.length;
     return;
   }
-  const names = move.folders.filter((f) => f.shared).map((f) => t(`folder.${f.kind}`)).join(", ");
+  const names = move.folders.filter((f) => f.shared).map(folderLabel).join(", ");
   const p = move.progress;
   const busy = p && (p.phase === "listing" || p.phase === "copying");
   el("share-status-text").textContent =
@@ -135,13 +148,11 @@ function renderSender() {
 }
 
 function renderReceiver() {
-  for (const f of move.folders) {
-    if (!offerSeen.has(f.kind)) { offerSeen.add(f.kind); offerSel.add(f.kind); } // neu angeboten: gewählt
-  }
+  selectNew(move.folders, offerSeen, offerSel);
   const key = JSON.stringify(move.folders);
   if (key !== offerKey) {
     offerKey = key;
-    folderRows(el("offer-list"), move.folders, offerSel, true);
+    folderRows(el("offer-list"), move.folders, offerSel, "offer");
   }
   el("offer-wait").textContent = move.folders.length ? "" : t("offer.wait");
   el("start-button").disabled = !move.folders.length;
@@ -157,28 +168,153 @@ function span(cls, text) {
   return s;
 }
 
+function smallButton(text, onClick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "quiet small";
+  b.textContent = text;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
 // folderRows zeichnet Ordner mit Häkchen; sel merkt sich die Auswahl.
-function folderRows(container, list, sel, showTarget) {
+// mode "share" (alter Rechner) oder "offer" (neuer Rechner, mit Ziel).
+function folderRows(container, list, sel, mode) {
   container.replaceChildren(...list.map((f) => {
+    const row = document.createElement("div");
+    row.className = "folder";
     const label = document.createElement("label");
-    label.className = "folder";
+    label.className = "folder-main";
     const cb = document.createElement("input");
     cb.type = "checkbox";
-    cb.checked = sel.has(f.kind);
-    cb.addEventListener("change", () => (cb.checked ? sel.add(f.kind) : sel.delete(f.kind)));
+    cb.checked = sel.has(f.id);
+    cb.addEventListener("change", () => (cb.checked ? sel.add(f.id) : sel.delete(f.id)));
+
     const text = document.createElement("span");
     text.className = "folder-text";
-    text.append(
-      span("folder-name", t(`folder.${f.kind}`)),
-      span("folder-path", showTarget ? t("folder.target", { path: f.path }) : f.path),
-    );
+    text.append(span("folder-name", folderLabel(f)));
+    if (mode === "share") {
+      text.append(span("folder-path", f.source));
+    } else {
+      if (f.custom) text.append(span("folder-path", t("folder.from", { path: f.source })));
+      text.append(span("folder-path", t("folder.target", { path: f.target })));
+    }
+    // Programmeinstellungen von Windows: unter Linux/macOS meist nutzlos.
+    if (f.appdata && (mode === "share" || infoOS !== "windows")) {
+      text.append(span("folder-hint", t("folder.appdataHint")));
+    }
+
     const size = f.ready
       ? `${t("folder.files", { count: f.files })} · ${formatBytes(f.bytes)}`
       : t("folder.counting");
     label.append(cb, text, span("folder-size", size));
-    return label;
+    row.append(label);
+
+    if (mode === "share" && f.custom) {
+      row.append(smallButton(t("folder.remove"), async () => {
+        shareSel.delete(f.id);
+        await moveAction("/api/move/remove", { id: f.id });
+      }));
+    }
+    if (mode === "offer") {
+      row.append(smallButton(t("folder.change"), () => openBrowser("target", {
+        id: f.id,
+        name: folderLabel(f),
+        start: parentPath(f.target),
+      })));
+    }
+    return row;
   }));
 }
+
+// parentPath: „/home/x/Bilder“ → „/home/x“, „C:\Daten\Fotos“ → „C:\Daten“.
+function parentPath(p) {
+  const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  if (i <= 0) return p.slice(0, 1) === "/" ? "/" : "";
+  const parent = p.slice(0, i);
+  return /^[A-Za-z]:$/.test(parent) ? parent + "\\" : parent;
+}
+
+// ---- Ordnerauswahl (Dialog) ----
+// mode "add": alter Rechner wählt einen weiteren Ordner zum Freigeben.
+// mode "target": neuer Rechner wählt das Ziel eines Ordners.
+
+const browser = { mode: "", id: "", name: "", listing: null };
+
+async function openBrowser(mode, opts = {}) {
+  Object.assign(browser, { mode, id: opts.id || "", name: opts.name || "", listing: null });
+  el("browser-title").textContent = mode === "add"
+    ? t("browse.titleAdd") : t("browse.titleTarget", { name: browser.name });
+  el("browser-hint").textContent = mode === "add" ? t("browse.hintAdd") : t("browse.hintTarget");
+  el("browser-pick").textContent = mode === "add" ? t("browse.add") : t("browse.here");
+  el("browser-sub").hidden = mode !== "target";
+  el("browser-sub").textContent = t("browse.sub", { name: browser.name });
+  await loadDir(opts.start || "");
+  if (!el("browser").open) el("browser").showModal();
+}
+
+async function loadDir(path) {
+  try {
+    browser.listing = await api(`/api/browse?path=${encodeURIComponent(path)}`);
+    renderBrowser();
+  } catch (err) {
+    if (path) return loadDir(""); // Ordner nicht lesbar: zum persönlichen Ordner
+    toast(errorText(err.code));
+  }
+}
+
+function renderBrowser() {
+  const l = browser.listing;
+  if (!l) return;
+  el("browser-path").textContent = l.path;
+  el("browser-up").disabled = !l.parent;
+  el("browser-places").replaceChildren(...l.places.map((p) =>
+    smallButton(p.name === "home" ? t("browse.home") : p.name, () => loadDir(p.path))));
+  const showHidden = el("browser-hidden").checked;
+  const dirs = l.dirs.filter((d) => showHidden || !d.hidden);
+  const list = el("browser-list");
+  if (!dirs.length) {
+    list.replaceChildren(span("status", t("browse.empty")));
+    return;
+  }
+  list.replaceChildren(...dirs.map((d) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "dir";
+    b.textContent = d.name;
+    b.addEventListener("click", () => loadDir(d.path));
+    return b;
+  }));
+}
+
+async function browserChoose(path) {
+  try {
+    if (browser.mode === "add") {
+      const res = await post("/api/move/add", { path });
+      shareSel.add(res.id);
+      shareSeen.add(res.id);
+      move = res.move;
+    } else {
+      move = await post("/api/move/target", { id: browser.id, path });
+      offerKey = ""; // Ziel neu zeichnen
+    }
+    el("browser").close();
+    render();
+  } catch (err) {
+    toast(errorText(err.code));
+  }
+}
+
+el("browser-up").addEventListener("click", () => loadDir(browser.listing.parent));
+el("browser-hidden").addEventListener("change", renderBrowser);
+el("browser-cancel").addEventListener("click", () => el("browser").close());
+el("browser-pick").addEventListener("click", () => browserChoose(browser.listing.path));
+el("browser-sub").addEventListener("click", () => {
+  const p = browser.listing.path;
+  const sep = p.includes("\\") ? "\\" : "/";
+  browserChoose(p.endsWith(sep) ? p + browser.name : p + sep + browser.name);
+});
+el("add-folder-button").addEventListener("click", () => openBrowser("add"));
 
 function formatDuration(sec) {
   if (sec < 60) return t("time.lessMinute");
@@ -292,9 +428,9 @@ async function moveAction(path, data) {
   }
 }
 
-el("share-button").addEventListener("click", () => moveAction("/api/move/share", { kinds: [...shareSel] }));
-el("start-button").addEventListener("click", () => moveAction("/api/move/start", { kinds: [...offerSel] }));
-el("again-button").addEventListener("click", () => moveAction("/api/move/start", { kinds: [...offerSel] }));
+el("share-button").addEventListener("click", () => moveAction("/api/move/share", { ids: [...shareSel] }));
+el("start-button").addEventListener("click", () => moveAction("/api/move/start", { ids: [...offerSel] }));
+el("again-button").addEventListener("click", () => moveAction("/api/move/start", { ids: [...offerSel] }));
 el("stop-button").addEventListener("click", () => moveAction("/api/move/stop"));
 
 function show(view) {

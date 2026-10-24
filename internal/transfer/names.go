@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
@@ -37,6 +38,19 @@ func targetRel(p string, windows bool) string {
 		parts[i] = part
 	}
 	return filepath.Join(parts...)
+}
+
+// SafeName macht aus einem Ordnernamen des anderen Rechners einen Namen, den
+// dieses System anlegen kann (z. B. für das vorgeschlagene Ziel).
+func SafeName(name string) string {
+	name = norm.NFC.String(strings.Trim(name, `/\`))
+	if runtime.GOOS == "windows" {
+		return windowsName(name)
+	}
+	if name == "" || name == "." || name == ".." {
+		return "_"
+	}
+	return strings.ReplaceAll(name, "/", "_")
 }
 
 var reservedWindows = map[string]bool{

@@ -22,6 +22,7 @@ type Server struct {
 }
 
 type share struct {
+	name  string
 	path  string
 	files int
 	bytes int64
@@ -30,18 +31,26 @@ type share struct {
 
 func NewServer() *Server { return &Server{shares: map[string]*share{}} }
 
-// Share gibt Ordner frei (ID → Pfad) und ersetzt frühere Freigaben. Dateien
-// und Größe werden im Hintergrund gezählt.
-func (s *Server) Share(ids []string, paths map[string]string) {
+// Share beschreibt einen Ordner, der freigegeben werden soll.
+type Share struct {
+	ID   string
+	Name string // Anzeigename (eigene Ordner)
+	Path string
+}
+
+// Share gibt Ordner frei und ersetzt frühere Freigaben. Dateien und Größe
+// werden im Hintergrund gezählt.
+func (s *Server) Share(list []Share) {
 	s.mu.Lock()
 	s.gen++
 	gen := s.gen
-	s.order = append([]string(nil), ids...)
+	s.order = nil
 	s.shares = map[string]*share{}
-	for _, id := range ids {
-		sh := &share{path: paths[id]}
-		s.shares[id] = sh
-		go s.count(gen, sh)
+	for _, sh := range list {
+		x := &share{name: sh.Name, path: sh.Path}
+		s.order = append(s.order, sh.ID)
+		s.shares[sh.ID] = x
+		go s.count(gen, x)
 	}
 	s.mu.Unlock()
 }
@@ -68,7 +77,7 @@ func (s *Server) Roots() []Root {
 	out := []Root{}
 	for _, id := range s.order {
 		sh := s.shares[id]
-		out = append(out, Root{ID: id, Files: sh.files, Bytes: sh.bytes, Ready: sh.ready})
+		out = append(out, Root{ID: id, Name: sh.name, Source: sh.path, Files: sh.files, Bytes: sh.bytes, Ready: sh.ready})
 	}
 	return out
 }

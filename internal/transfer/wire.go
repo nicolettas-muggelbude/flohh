@@ -103,12 +103,15 @@ type response struct {
 	Size    int64   `json:"size,omitempty"`
 }
 
-// Root ist ein freigegebener Ordner. ID ist die Art (folders.Kind).
+// Root ist ein freigegebener Ordner. ID ist die Art (folders.Kind) oder bei
+// eigenen Ordnern „custom-N“.
 type Root struct {
-	ID    string `json:"id"`
-	Files int    `json:"files"`
-	Bytes int64  `json:"bytes"`
-	Ready bool   `json:"ready"` // Zählung fertig
+	ID     string `json:"id"`
+	Name   string `json:"name,omitempty"`   // Ordnername (für eigene Ordner)
+	Source string `json:"source,omitempty"` // Pfad auf dem alten Rechner (zur Anzeige)
+	Files  int    `json:"files"`
+	Bytes  int64  `json:"bytes"`
+	Ready  bool   `json:"ready"` // Zählung fertig
 }
 
 // Entry ist eine Datei in einem freigegebenen Ordner.

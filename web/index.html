@@ -90,6 +90,9 @@
         <h3 data-i18n="share.title"></h3>
         <div id="share-list" class="folder-list"></div>
         <div class="actions">
+          <button class="quiet" id="add-folder-button" data-i18n="share.addFolder"></button>
+        </div>
+        <div class="actions">
           <button class="primary" id="share-button" data-i18n="share.button"></button>
         </div>
       </div>
@@ -127,6 +130,27 @@
   </footer>
 
   <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Ordnerauswahl: weiteren Ordner freigeben bzw. Ziel wählen -->
+  <dialog id="browser" aria-labelledby="browser-title">
+    <h2 id="browser-title"></h2>
+    <p id="browser-hint" class="hint"></p>
+    <div id="browser-places" class="places"></div>
+    <div class="browser-path">
+      <button type="button" class="quiet small" id="browser-up" data-i18n="browse.up"></button>
+      <span id="browser-path"></span>
+    </div>
+    <label class="check">
+      <input type="checkbox" id="browser-hidden">
+      <span data-i18n="browse.showHidden"></span>
+    </label>
+    <div id="browser-list" class="browser-list"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="browser-pick"></button>
+      <button type="button" class="quiet" id="browser-sub" hidden></button>
+      <button type="button" class="quiet" id="browser-cancel" data-i18n="common.cancel"></button>
+    </div>
+  </dialog>
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>
