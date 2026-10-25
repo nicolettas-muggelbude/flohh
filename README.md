@@ -21,14 +21,16 @@ mit Fortschritt, ohne etwas zu überschreiben, und fortsetzbar.
 
 | Verbindung | Tempo (ca.) | Hinweis |
 | --- | --- | --- |
-| **LAN-Kabel direkt** von Rechner zu Rechner | bis 110 MB/s | kein Router nötig |
-| **Über den Router** per LAN-Kabel | bis 110 MB/s | beide am selben Router |
+| **LAN-Kabel direkt** von Rechner zu Rechner | 1 Gbit: bis 110 MB/s, 2,5 Gbit: bis 280 MB/s | kein Router nötig |
+| **Über den Router** per LAN-Kabel | wie oben, je nach Router | beide am selben Router |
 | **Über den Router** per WLAN | 5–60 MB/s | beide im selben WLAN, nicht im Gast-WLAN |
 | **Gemischt**: einer per LAN, einer per WLAN | wie WLAN | beide am selben Router |
 | **Thunderbolt 3/4/5 oder USB4** (USB-C) direkt | 300 MB/s und mehr | beide Anschlüsse müssen Thunderbolt/USB4 können |
-| **USB-LAN-Adapter** (USB-A oder USB-C) plus LAN-Kabel | USB 3: bis 110 MB/s, USB 2: ca. 35 MB/s | für Laptops ohne LAN-Anschluss |
+| **USB-LAN-Adapter** (USB-A oder USB-C) plus LAN-Kabel | 2,5-Gbit-Adapter an USB 3: bis 280 MB/s, 1 Gbit: bis 110 MB/s, an USB 2: ca. 35 MB/s | für Laptops ohne LAN-Anschluss |
 
-Die Werte sind Richtwerte; oft bremst die langsamere Festplatte. Gast-WLANs
+Die Werte sind Richtwerte: Es zählt die langsamere Seite – der langsamere
+Anschluss, Router oder Festplatte. Im Test erreichte ein USB-LAN-Adapter
+(Linux) direkt an Windows bis 160 MB/s. Gast-WLANs
 und manche Mesh-Systeme lassen Geräte nicht miteinander sprechen
 („Client-Isolation“) – dann per Kabel verbinden.
 
