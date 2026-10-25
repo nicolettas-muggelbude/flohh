@@ -3,9 +3,10 @@
 Versionen nach [Semantic Versioning](https://semver.org/lang/de/): `v0.x.y`
 ist eine Vorabversion – bis `v1.0.0` kann sich noch einiges ändern.
 
-## v0.2.0 – in Arbeit
+## v0.2.0 – 2026-10-25
 
 Schwerpunkt: Verbinden über LAN und WLAN, auch Windows ↔ Windows.
+Getestet: Windows ↔ Windows über LAN und WLAN.
 
 ### Verbinden
 
@@ -18,6 +19,19 @@ Schwerpunkt: Verbinden über LAN und WLAN, auch Windows ↔ Windows.
 - Verständliche Meldung, wenn die Firewall eines Windows-Empfängers blockt.
 - Beide Seiten stellen sich beim Verbinden vor (Protokoll v2) – v0.2.0
   arbeitet nicht mit v0.1.0 zusammen.
+
+### Linux
+
+- Steckt im Anwendungsmenü eine andere flohh-Version, bietet flohh
+  „Aktualisieren“ an; steckt dort genau diese, kommt kein Hinweis mehr.
+
+### Download
+
+- `flohh-<version>.zip` mit allem steht ganz oben; entpackt ergibt es einen
+  Ordner. Darin jetzt auch `SHA256SUMS.txt` zum Prüfen der Dateien.
+- Anleitung: ausführliche Schritte für Linux (kopieren, ausführbar machen,
+  nicht per Doppelklick starten) und „Damit nichts kaputtgeht“ – erst auf
+  dem Zielrechner entpacken, Stick auswerfen, Dateien prüfen.
 
 ## v0.1.0 – 2026-10-25
 

@@ -90,6 +90,30 @@ Tipp: Den Stick mit exFAT formatieren. Das können Windows, Mac und
 Linux lesen und schreiben.
 
 
+Damit nichts kaputtgeht
+-----------------------
+
+- Das ZIP am besten erst auf dem Rechner entpacken, auf dem flohh
+  laufen soll – nicht direkt auf dem Stick.
+- Den Stick vor dem Abziehen immer "auswerfen" bzw. "Hardware sicher
+  entfernen". Sonst kann die zuletzt geschriebene Datei unvollständig
+  sein.
+- Startet flohh nicht oder stürzt sofort ab ("Speicherzugriffsfehler"),
+  ist die Datei fast immer beschädigt. Prüfen mit der Datei
+  SHA256SUMS.txt aus diesem Ordner:
+
+  Linux (Terminal, im Ordner mit den Dateien):
+      sha256sum -c --ignore-missing SHA256SUMS.txt
+      → bei jeder Datei muss "OK" stehen
+
+  Windows (PowerShell, im Ordner mit den Dateien):
+      Get-FileHash Flohh-Windows.exe
+      → den Wert mit der Zeile in SHA256SUMS.txt vergleichen
+
+  Stimmt etwas nicht: neu kopieren. Passiert es wieder, ist vielleicht
+  der Stick defekt (prüfen z. B. mit H2testw bzw. f3).
+
+
 Lizenz
 ------
 

@@ -1,95 +1,75 @@
-# 🎉 flohh v0.1.0 Release Notes
+# 🎉 flohh v0.2.0 Release Notes
 
 ## 💾 Downloads
 
 | Plattform | Download |
 |-----------|----------|
-| 📦 **Alle Systeme** (empfohlen – ZIP mit allen Programmen und Anleitung, auch für den USB-Stick) | [⬇ flohh-v0.1.0.zip](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0.zip) |
-| 🪟 **Windows** (x64) | [⬇ flohh-v0.1.0-windows-x64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-windows-x64.exe) |
-| 🪟 **Windows** (ARM, z. B. Surface Pro X) | [⬇ flohh-v0.1.0-windows-arm64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-windows-arm64.exe) |
-| 🐧 **Linux** (x86_64) | [⬇ flohh-v0.1.0-linux-x86_64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-linux-x86_64) |
-| 🐧 **Linux** (ARM64, z. B. Raspberry Pi) | [⬇ flohh-v0.1.0-linux-arm64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-linux-arm64) |
-| 🍎 **macOS** (Apple Silicon, ungetestet) | [⬇ flohh-v0.1.0-macos-applesilicon](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-macos-applesilicon) |
-| 🍎 **macOS** (Intel, ungetestet) | [⬇ flohh-v0.1.0-macos-intel](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-macos-intel) |
-| 🔐 Prüfsummen | [⬇ SHA256SUMS.txt](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/SHA256SUMS.txt) |
+| 📦 **Alle Systeme** (empfohlen – ZIP mit allen Programmen, Anleitung und Prüfsummen, auch für den USB-Stick) | [⬇ flohh-v0.2.0.zip](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0.zip) |
+| 🪟 **Windows** (x64) | [⬇ flohh-v0.2.0-windows-x64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-windows-x64.exe) |
+| 🪟 **Windows** (ARM, z. B. Surface Pro X) | [⬇ flohh-v0.2.0-windows-arm64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-windows-arm64.exe) |
+| 🐧 **Linux** (x86_64) | [⬇ flohh-v0.2.0-linux-x86_64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-linux-x86_64) |
+| 🐧 **Linux** (ARM64, z. B. Raspberry Pi) | [⬇ flohh-v0.2.0-linux-arm64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-linux-arm64) |
+| 🍎 **macOS** (Apple Silicon, ungetestet) | [⬇ flohh-v0.2.0-macos-applesilicon](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-macos-applesilicon) |
+| 🍎 **macOS** (Intel, ungetestet) | [⬇ flohh-v0.2.0-macos-intel](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/flohh-v0.2.0-macos-intel) |
+| 🔐 Prüfsummen | [⬇ SHA256SUMS.txt](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.2.0/SHA256SUMS.txt) |
 
 ---
 
-## 🚀 Erste Vorabversion: Daten springen von Rechner zu Rechner!
+## 🪟↔🪟 Jetzt auch von Windows zu Windows!
 
-**flohh v0.1.0** zieht deine Daten vom alten auf den neuen Rechner um – ohne
-Installation, ohne Cloud, ohne Konto, ohne externes Laufwerk (HDD/SSD). Ein
-Programm auf beiden Rechnern, ein Kabel dazwischen (oder dasselbe Netz), ein
-Code – fertig.
+**flohh v0.2.0** schafft den häufigsten Umzug überhaupt: vom alten auf den
+neuen Windows-PC – per LAN, per WLAN oder per Kabel direkt. Wie gehabt ohne
+Installation, ohne Cloud, ohne Konto, ohne externes Laufwerk (HDD/SSD).
 
-**Wie ein Floh mit einem Satz von Hund zu Hund springt, springen deine Daten
-jetzt von Rechner zu Rechner.** 🐾
+**Ein Floh springt nicht nur von Hund zu Hund – er findet auch über den
+Gartenzaun hinweg den Weg.** 🐾
 
 ---
 
 ## ✨ Highlights dieser Version
 
-### 🔌 Verbinden ohne Fummelei
+### 🪟 Windows ↔ Windows
 
-- Die Rechner **finden sich von selbst** – per LAN-Kabel direkt, über den
-  Router (LAN oder WLAN), per Thunderbolt/USB4 oder mit USB-LAN-Adaptern
-- **Direktes Kabel klappt immer**, auch wenn die Rechner verschiedene
-  Adressbereiche haben (flohh weicht auf IPv6 link-local aus)
-- **Windows öffnet keinen Port** – die Windows-Firewall fragt höchstens
-  einmal nach
+- Ein Windows-Rechner, der **„Empfangen“** wählt, nimmt jetzt Verbindungen an
+- Beim ersten Mal fragt die **Windows-Firewall** einmal nach – „Zugriff
+  zulassen“ klicken, danach nie wieder
+- Blockt die Firewall doch, sagt flohh das **klar und mit Lösung** statt nur
+  „nicht erreichbar“
+- Im Test: **Windows ↔ Windows über LAN und WLAN** ✅
 
-### 🔒 Sicher gekoppelt
+### 📍 Verbinden per Adresse
 
-- Der neue Rechner zeigt einen **6-stelligen Code**, der alte gibt ihn ein
-- Verschlüsselt mit **TLS 1.3 + CPace** – der Code wird nie übertragen,
-  Raten ist aussichtslos (nach drei Fehlversuchen gibt es einen neuen Code)
-- Der alte Rechner gibt **nur frei, was angehakt ist** – nur lesend
+- Finden sich die Rechner nicht von selbst – etwa weil der Router **LAN und
+  WLAN trennt** oder Rundrufe filtert –, zeigt der neue Rechner seine
+  **Adresse** unter dem Code an
+- Am alten Rechner unter **„Rechner nicht dabei? Adresse eingeben“**
+  eintippen, Code dazu – fertig
 
-### 📦 Umziehen, wie es sein soll
+### 🐧 Linux
 
-- **Benutzerordner** (Dokumente, Bilder, Musik, Videos, Schreibtisch,
-  Downloads), **eigene Ordner** und **versteckte** wie AppData
-- „Bilder“ landet im Bilder-Ordner des neuen Rechners – **auch wenn er dort
-  „Pictures“ heißt**; eigene Ordner bekommen ein Ziel, das du ändern kannst
-- **Nichts wird überschrieben** – abweichende Dateien kommen als
-  „Name (2).ext“ dazu
-- **Abgebrochen? Einfach neu starten** – schon Kopiertes wird übersprungen
-- Änderungsdatum bleibt, Umlaute werden einheitlich geschrieben
+- Steckt im **Anwendungsmenü** noch eine ältere flohh-Version, bietet flohh
+  **„Aktualisieren“** an
 
-### ⚡ Schnell
+### 📦 Download und Anleitung
 
-- Volle Leitung bei großen Dateien – **im Test 34 GB in 5 Minuten** über
-  1 Gbit (ISO mit 116,8 MB/s)
-- Auch viele kleine Dateien sind flott: flohh fragt voraus und liest parallel
-
-### 🧹 Ehrlich bei dem, was nicht mitkommt
-
-- **Gesperrte Dateien** werden mit dem Programm genannt, das sie offen hält
-  („Gesperrt von Microsoft Edge: 31 Dateien“), samt Tipp
-- **Bewusst weggelassen** und gezählt: Systemdateien wie desktop.ini,
-  Windows-interne Bereiche in AppData und Dateien, die nur in der Cloud liegen
-
-### 🧳 Klein und mobil
-
-- **Eine Datei pro System**, keine Installation
-- Vom **USB-Stick** gestartet, ist der Stick sofort wieder frei – ein Stick
-  reicht für beide Rechner
-- Linux: auf Wunsch **Eintrag im Anwendungsmenü**
-- Oberfläche **hell/dunkel** nach Systemeinstellung
+- **Ein ZIP mit allem** steht ganz oben – entpackt ergibt es einen Ordner mit
+  allen Programmen, der Anleitung und **Prüfsummen** (`SHA256SUMS.txt`)
+- Neuer Abschnitt **„Damit nichts kaputtgeht“**: erst auf dem Zielrechner
+  entpacken, Stick immer auswerfen, Dateien bei Bedarf prüfen
 
 ---
 
 ## 🚀 Starten
 
-Am einfachsten: **flohh-v0.1.0.zip** laden und entpacken – im Ordner
-`flohh-v0.1.0` liegen die Programme für alle Systeme und eine Anleitung
-(`LIESMICH.txt`). Den Ordner kannst du auch auf einen USB-Stick kopieren.
+Am einfachsten: **flohh-v0.2.0.zip** laden und **auf dem Rechner** entpacken,
+auf dem flohh laufen soll – im Ordner `flohh-v0.2.0` liegen die Programme
+für alle Systeme und die Anleitung (`LIESMICH.txt`).
 
 ### 🪟 Windows
 
 Doppelklick auf `Flohh-Windows.exe`. Bei „Der Computer wurde durch Windows
 geschützt“ auf „Weitere Informationen“ → „Trotzdem ausführen“. Fragt die
-Firewall nach: „Zugriff zulassen“ (nur beim ersten Mal).
+Firewall nach: **„Zugriff zulassen“** (nur beim ersten Mal).
 
 ### 🐧 Linux – bitte genau so, ein Doppelklick startet flohh nicht
 
@@ -105,8 +85,12 @@ Firewall nach: „Zugriff zulassen“ (nur beim ersten Mal).
 3. **Starten – nicht per Doppelklick:**
    - **Rechtsklick** auf die Datei → „Als Programm ausführen“
    - oder in der **Konsole:** `~/Schreibtisch/Flohh-Linux`
-4. flohh bietet dann an, sich ins **Anwendungsmenü** aufzunehmen. Danach
-   startest du es mit einem Klick über „Anwendungen anzeigen“.
+4. flohh bietet dann an, sich ins **Anwendungsmenü** aufzunehmen (bzw. eine
+   ältere Version dort zu aktualisieren).
+
+Stürzt flohh sofort mit „Speicherzugriffsfehler“ ab, ist die Datei beim
+Kopieren beschädigt worden – prüfen mit `sha256sum -c --ignore-missing
+SHA256SUMS.txt` im entpackten Ordner, dann neu kopieren.
 
 ### 🔁 Auf beiden Rechnern
 
@@ -117,11 +101,13 @@ Ordner freigeben, Übertragung starten.
 
 ## ⚠️ Bekannte Einschränkungen
 
-- **Windows ↔ Windows** geht noch nicht – die Firewall-Freigabe folgt
+- **v0.2.0 und v0.1.0 verstehen sich nicht** – bitte auf beiden Rechnern
+  v0.2.0 verwenden
 - **macOS** ist gebaut, aber ungetestet und nicht von Apple signiert
 - Dateien, die **nur in der Cloud** liegen (OneDrive), werden nicht übertragen
 
-**Getestet:** Windows 10 ↔ Ubuntu 24.04 per Direktkabel und USB-LAN-Adapter.
+**Getestet:** Windows ↔ Windows über LAN und WLAN, Windows 10 ↔ Ubuntu 24.04
+per Direktkabel und USB-LAN-Adapter.
 
 ---
 

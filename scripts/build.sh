@@ -69,6 +69,8 @@ cp packaging/usb/LIESMICH.txt dist/usb/
 # Lizenzen müssen mit den Programmen weitergegeben werden (GPL, BSD).
 cp LICENSE dist/usb/LICENSE.txt
 cp THIRD-PARTY-LICENSES.txt dist/usb/
+# Prüfsummen zum Nachprüfen auf dem Zielrechner (beschädigte Kopie vom Stick).
+(cd dist/usb && sha256sum Flohh-* > SHA256SUMS.txt)
 
 # Zum Herunterladen: ein ZIP mit allem. Entpackt ergibt es einen Ordner
 # „flohh-<version>“ (auch direkt auf einen USB-Stick).
