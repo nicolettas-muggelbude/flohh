@@ -18,6 +18,13 @@ var (
 
 const errorMoreData = 234 // ERROR_MORE_DATA
 
+// RM_APP_TYPE: Teile von Windows selbst.
+const (
+	rmService  = 3    // RmService
+	rmExplorer = 4    // RmExplorer
+	rmCritical = 1000 // RmCritical
+)
+
 // rmProcessInfo entspricht RM_PROCESS_INFO aus RestartManager.h.
 type rmProcessInfo struct {
 	PID              uint32
@@ -64,17 +71,25 @@ func lockedBy(path string) []string {
 		if r != 0 {
 			return nil
 		}
+		// Programme zuerst, „Windows selbst“ (Dienste, Explorer, kritische
+		// Systemprozesse) nur, wenn sonst niemand die Datei hält.
 		var names []string
+		system := false
 		seen := map[string]bool{}
 		for _, info := range infos[:n] {
-			name := syscall.UTF16ToString(info.AppName[:])
-			if name == "" {
-				name = syscall.UTF16ToString(info.ServiceShortName[:])
+			switch info.AppType {
+			case rmService, rmExplorer, rmCritical:
+				system = true
+				continue
 			}
+			name := syscall.UTF16ToString(info.AppName[:])
 			if name != "" && !seen[name] {
 				seen[name] = true
 				names = append(names, name)
 			}
+		}
+		if system {
+			names = append(names, ByWindows)
 		}
 		return names
 	}

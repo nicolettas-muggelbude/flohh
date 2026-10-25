@@ -2,34 +2,41 @@ package transfer
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
-	"syscall"
+	"strings"
 	"testing"
+	"time"
 )
 
-// Eine Datei, die (wie bei Edge) ohne Mitbenutzung geöffnet ist, wird als
-// „gesperrt“ erkannt – samt dem Programm, das sie hält (hier: dieser Test).
+// Eine Datei, die ein anderes Programm (wie Edge) ohne Mitbenutzung geöffnet
+// hat, wird als „gesperrt“ erkannt – samt Programmname. Hier sperrt
+// PowerShell die Datei. (Den eigenen Prozess meldet Windows immer als
+// „kritisch“, darum ein zweites Programm.)
 func TestLockedByRestartManager(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gesperrt.db")
 	os.WriteFile(path, []byte("x"), 0o644)
-	p, _ := syscall.UTF16PtrFromString(path)
-	h, err := syscall.CreateFile(p, syscall.GENERIC_READ, 0 /* keine Mitbenutzung */, nil,
-		syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
-	if err != nil {
-		t.Fatal(err)
+	ps := exec.Command("powershell", "-NoProfile", "-Command",
+		"$f=[IO.File]::Open('"+path+"','Open','Read','None'); Write-Output bereit; Start-Sleep 20")
+	out, _ := ps.StdoutPipe()
+	if err := ps.Start(); err != nil {
+		t.Skip("PowerShell nicht verfügbar")
 	}
-	defer syscall.CloseHandle(h)
+	defer ps.Process.Kill()
+	buf := make([]byte, 64)
+	out.Read(buf) // wartet auf „bereit“
+	time.Sleep(200 * time.Millisecond)
 
-	_, err = os.Open(path)
+	_, err := os.Open(path)
 	if code := readErrCode(err); code != errLocked {
 		t.Fatalf("Code %q (Fehler %v), erwartet %q", code, err, errLocked)
 	}
 	names := lockedBy(path)
 	t.Logf("gesperrt von: %q", names)
-	if len(names) == 0 {
-		t.Error("Restart Manager nennt kein Programm")
+	if len(names) == 0 || names[0] == ByWindows || !strings.Contains(strings.ToLower(names[0]), "powershell") {
+		t.Errorf("erwartet PowerShell, bekommen %q", names)
 	}
-	if r := readError(err, path); r.Error != errLocked || r.By == "" {
+	if r := readError(err, path); r.Error != errLocked || r.By != names[0] {
 		t.Errorf("Antwort: %+v", r)
 	}
 }

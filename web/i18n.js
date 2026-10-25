@@ -109,6 +109,8 @@ const messages = {
       other: "Gesperrt von {app}: {count} Dateien",
     },
     "progress.lockedHintApps": "Beende diese Programme ganz – auch im Hintergrund, z. B. über den Task-Manager – und klicke „Erneut starten“. Bereits Kopiertes wird übersprungen.",
+    "progress.windowsItself": "Windows selbst",
+    "progress.windowsTip": "Dateien, die Windows selbst offen hält (Dienste, Explorer), braucht der neue Rechner nicht – sie lassen sich ignorieren.",
     "progress.edgeTip": "Microsoft Edge läuft nach dem Schließen im Hintergrund weiter. Beende ihn im Task-Manager oder schalte in Edge unter Einstellungen → System und Leistung „Startboost“ und „Erweiterungen und Apps im Hintergrund weiter ausführen“ aus.",
     "failure.access_denied": "keine Berechtigung zum Lesen",
     "progress.lockedHint": {

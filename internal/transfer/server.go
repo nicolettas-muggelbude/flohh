@@ -371,7 +371,7 @@ func walkFiles(root string, fn func(rel string, fi fs.FileInfo) error, skipped *
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		if skipName(d.Name()) {
+		if skipName(d.Name()) || skipInternal(root, p) {
 			if skipped != nil {
 				skipped.System++
 			}

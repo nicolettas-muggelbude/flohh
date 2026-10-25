@@ -26,6 +26,10 @@ func readErrCode(err error) string {
 	}
 }
 
+// ByWindows steht statt eines Programmnamens, wenn Windows selbst (Dienst,
+// Explorer, Systemprozess) die Datei offen hält. Die Oberfläche übersetzt es.
+const ByWindows = "@windows"
+
 // readError liefert die Fehlerantwort für eine Datei; bei gesperrten Dateien
 // mit dem Programm, das sie geöffnet hat (unter Windows).
 func readError(err error, path string) response {

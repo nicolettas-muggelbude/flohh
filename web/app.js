@@ -331,6 +331,9 @@ function formatDuration(sec) {
   return t("time.hours", { hours: Math.floor(m / 60), minutes: m % 60 });
 }
 
+// appLabel: „@windows“ heißt Windows selbst (Dienst, Explorer, System).
+const appLabel = (app) => (app === "@windows" ? t("progress.windowsItself") : app);
+
 function failureText(code) {
   const key = `failure.${code}`;
   return (messages[lang][key] ?? messages[fallbackLang][key]) ? t(key) : code;
@@ -400,9 +403,10 @@ function renderProgress(box, p, stopping, skipped) {
     const apps = Object.entries(p.lockedBy || {}).sort((a, b) => b[1] - a[1]);
     if (apps.length) {
       // Windows hat gesagt, welche Programme die Dateien offen halten.
-      for (const [app, count] of apps) add("folder-hint", t("progress.lockedByApp", { app, count }));
+      for (const [app, count] of apps) add("folder-hint", t("progress.lockedByApp", { app: appLabel(app), count }));
       if (apps.some(([app]) => /edge/i.test(app))) add("progress-line muted", t("progress.edgeTip"));
-      add("progress-line muted", t("progress.lockedHintApps"));
+      if (apps.some(([app]) => app !== "@windows")) add("progress-line muted", t("progress.lockedHintApps"));
+      if (apps.some(([app]) => app === "@windows")) add("progress-line muted", t("progress.windowsTip"));
     } else {
       add("folder-hint", t("progress.lockedHint", { count: p.filesLocked }));
     }
@@ -420,7 +424,7 @@ function renderProgress(box, p, stopping, skipped) {
     ul.className = "failures";
     for (const f of p.failures) {
       const li = document.createElement("li");
-      const why = f.by ? t("failure.lockedBy", { app: f.by }) : failureText(f.error);
+      const why = f.by ? t("failure.lockedBy", { app: appLabel(f.by) }) : failureText(f.error);
       li.textContent = `${f.path} – ${why}`;
       ul.append(li);
     }
