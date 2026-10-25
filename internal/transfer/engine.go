@@ -42,6 +42,7 @@ type Progress struct {
 	Error        string    `json:"error,omitempty"`
 	Failures     []Failure `json:"failures,omitempty"`
 	StartedAt    int64     `json:"startedAt"` // Unix-Millisekunden
+	Speed        int64     `json:"speed"`     // Bytes/s der letzten Sekunden, gemessen beim Empfänger
 }
 
 // Failure ist eine Datei, die nicht übertragen werden konnte.
@@ -61,8 +62,9 @@ type Engine struct {
 	c       *Client
 	windows bool
 
-	mu sync.Mutex
-	p  Progress
+	mu      sync.Mutex
+	p       Progress
+	samples []sample // Messpunkte für das Tempo
 }
 
 func NewEngine(c *Client) *Engine { return &Engine{c: c, windows: runtime.GOOS == "windows"} }
@@ -73,7 +75,44 @@ func (e *Engine) Progress() Progress {
 	defer e.mu.Unlock()
 	p := e.p
 	p.Failures = append([]Failure(nil), e.p.Failures...)
+	p.Speed = speed(e.samples, p.BytesCopied, time.Now())
 	return p
+}
+
+// Tempo: Messpunkte (Zeit, übertragene Bytes) höchstens alle 200 ms, die
+// letzten speedWindow lang. Gemessen wird hier, beim Speichern, mit der
+// eigenen Uhr – so stimmt die Anzeige auf beiden Rechnern.
+type sample struct {
+	t time.Time
+	b int64
+}
+
+const speedWindow = 5 * time.Second
+
+func (e *Engine) addSample(b int64) {
+	now := time.Now()
+	if n := len(e.samples); n > 0 && now.Sub(e.samples[n-1].t) < 200*time.Millisecond {
+		return
+	}
+	e.samples = append(e.samples, sample{now, b})
+	// Alte Punkte weg, aber einen vor dem Fenster behalten (Startpunkt).
+	for len(e.samples) > 2 && now.Sub(e.samples[1].t) > speedWindow {
+		e.samples = e.samples[1:]
+	}
+}
+
+// speed: übertragene Bytes seit dem ältesten Punkt im Fenster, geteilt
+// durch die Zeit bis jetzt. Stockt die Übertragung, sinkt der Wert.
+func speed(samples []sample, copied int64, at time.Time) int64 {
+	if len(samples) == 0 {
+		return 0
+	}
+	first := samples[0]
+	dt := at.Sub(first.t)
+	if dt < time.Second {
+		return 0 // zu kurz für eine Aussage
+	}
+	return int64(float64(copied-first.b) / dt.Seconds())
 }
 
 func (e *Engine) update(f func(p *Progress)) {
@@ -92,6 +131,7 @@ type job struct {
 func (e *Engine) Run(ctx context.Context, plans []Plan) error {
 	e.update(func(p *Progress) {
 		*p = Progress{Phase: PhaseListing, StartedAt: time.Now().UnixMilli()}
+		e.samples = nil
 	})
 
 	var jobs []job
@@ -316,6 +356,7 @@ func (w progressWriter) Write(p []byte) (int, error) {
 	w.e.update(func(pr *Progress) {
 		pr.BytesDone += int64(n)
 		pr.BytesCopied += int64(n)
+		w.e.addSample(pr.BytesCopied) // e.mu ist hier gehalten
 	})
 	return n, err
 }

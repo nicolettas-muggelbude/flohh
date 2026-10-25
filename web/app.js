@@ -336,25 +336,6 @@ function failureText(code) {
   return (messages[lang][key] ?? messages[fallbackLang][key]) ? t(key) : code;
 }
 
-// currentSpeed: Tempo der letzten Sekunden (Bytes/s), nur wirklich
-// übertragene Bytes. Ein Durchschnitt seit Beginn wäre irreführend – viele
-// kleine Dateien am Anfang drücken ihn lange nach unten. Messpunkte hängen
-// am Anzeigekasten, jede Seite misst für sich.
-const speedSamples = new WeakMap();
-function currentSpeed(box, p) {
-  let s = speedSamples.get(box);
-  if (!s || s.run !== p.startedAt) {
-    s = { run: p.startedAt, points: [] };
-    speedSamples.set(box, s);
-  }
-  const now = Date.now();
-  s.points.push({ t: now, bytes: p.bytesCopied });
-  while (s.points.length > 2 && now - s.points[0].t > 8000) s.points.shift();
-  const first = s.points[0];
-  const dt = (now - first.t) / 1000;
-  return dt >= 2 ? (p.bytesCopied - first.bytes) / dt : 0;
-}
-
 // renderProgress zeigt Balken, Zahlen, aktuelle Datei bzw. Ergebnis.
 function renderProgress(box, p, stopping, skipped) {
   box.replaceChildren();
@@ -393,7 +374,8 @@ function renderProgress(box, p, stopping, skipped) {
   }));
 
   if (p.phase === "copying") {
-    const speed = currentSpeed(box, p);
+    // Tempo misst der neue Rechner beim Speichern (letzte 5 Sekunden).
+    const speed = p.speed;
     if (speed > 0) {
       add("progress-line muted", t("progress.eta", {
         time: formatDuration((p.bytesTotal - p.bytesDone) / speed),

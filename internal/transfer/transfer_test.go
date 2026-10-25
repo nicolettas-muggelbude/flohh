@@ -252,6 +252,60 @@ func TestCancelMidway(t *testing.T) {
 	}
 }
 
+func TestSpeed(t *testing.T) {
+	t0 := time.Unix(1000, 0)
+	at := func(s float64) time.Time { return t0.Add(time.Duration(s * float64(time.Second))) }
+	samples := []sample{{at(0), 0}, {at(1), 50_000_000}, {at(2), 100_000_000}}
+
+	// 100 MB in 2 s gemessen, jetzt bei 2 s: 50 MB/s.
+	if got := speed(samples, 100_000_000, at(2)); got != 50_000_000 {
+		t.Errorf("Tempo %d, erwartet 50 MB/s", got)
+	}
+	// Stockt es 2 s lang, sinkt das Tempo: 100 MB in 4 s.
+	if got := speed(samples, 100_000_000, at(4)); got != 25_000_000 {
+		t.Errorf("nach Stocken %d, erwartet 25 MB/s", got)
+	}
+	// Unter einer Sekunde Messzeit: keine Aussage.
+	if got := speed(samples[:1], 10, at(0.5)); got != 0 {
+		t.Errorf("zu früh: %d", got)
+	}
+}
+
+// Das gemeldete Tempo passt zum tatsächlichen Tempo, auch wenn der Sender
+// gebremst ist (hier: 50 ms je Datei beim Öffnen, 8 parallel → ca. 4 s).
+func TestSpeedMatchesReality(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	data := make([]byte, 20_000)
+	for i := 0; i < 640; i++ {
+		write(t, filepath.Join(src, fmt.Sprintf("d%03d", i)), data, time.Now())
+	}
+	openFile = func(name string) (*os.File, error) {
+		time.Sleep(50 * time.Millisecond)
+		return os.Open(name)
+	}
+	defer func() { openFile = os.Open }()
+
+	s := NewServer()
+	s.Share([]Share{{ID: "documents", Path: src}})
+	e := NewEngine(connect(t, s))
+	done := make(chan struct{})
+	go func() {
+		e.Run(context.Background(), []Plan{{Root: "documents", Target: dst}})
+		close(done)
+	}()
+	time.Sleep(1500 * time.Millisecond)
+	p1, t1 := e.Progress(), time.Now()
+	time.Sleep(1 * time.Second)
+	p2, t2 := e.Progress(), time.Now()
+	<-done
+
+	real := float64(p2.BytesCopied-p1.BytesCopied) / t2.Sub(t1).Seconds()
+	shown := float64(p2.Speed)
+	if real == 0 || shown < real*0.6 || shown > real*1.4 {
+		t.Errorf("angezeigt %.1f MB/s, tatsächlich %.1f MB/s", shown/1e6, real/1e6)
+	}
+}
+
 func TestWindowsName(t *testing.T) {
 	cases := map[string]string{
 		"Notiz: wichtig?.txt": "Notiz_ wichtig_.txt",

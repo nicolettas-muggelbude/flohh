@@ -29,8 +29,7 @@ mit Fortschritt, ohne etwas zu überschreiben, und fortsetzbar.
 | **USB-LAN-Adapter** (USB-A oder USB-C) plus LAN-Kabel | 2,5-Gbit-Adapter an USB 3: bis 280 MB/s, 1 Gbit: bis 110 MB/s, an USB 2: ca. 35 MB/s | für Laptops ohne LAN-Anschluss |
 
 Die Werte sind Richtwerte: Es zählt die langsamere Seite – der langsamere
-Anschluss, Router oder Festplatte. Im Test erreichte ein USB-LAN-Adapter
-(Linux) direkt an Windows bis 160 MB/s. Gast-WLANs
+Anschluss, Router oder Festplatte. Gast-WLANs
 und manche Mesh-Systeme lassen Geräte nicht miteinander sprechen
 („Client-Isolation“) – dann per Kabel verbinden.
 
