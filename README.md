@@ -9,7 +9,8 @@
 
 Portable App, die beim PC-Umzug Bibliotheken und Ordner von einem Rechner auf
 einen anderen kopiert – Windows, Linux und macOS in allen Richtungen. Per
-LAN-Kabel, über den Router (LAN oder WLAN) oder per Thunderbolt/USB4.
+LAN-Kabel, über den Router (LAN oder WLAN) oder per Thunderbolt/USB4 – ohne
+Installation, ohne Cloud, ohne Konto, ohne externes Laufwerk (HDD/SSD).
 
 **Status:** Meilenstein 2 läuft. Zwei Rechner finden sich im Netz (auch per
 direktem Kabel) und koppeln sich verschlüsselt per 6-stelligem Code. Der alte
