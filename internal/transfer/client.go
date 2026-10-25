@@ -8,9 +8,14 @@ import (
 
 // RemoteError meldet der Sender (z. B. Datei nicht lesbar). Die Verbindung
 // selbst ist dann in Ordnung.
-type RemoteError string
+type RemoteError struct {
+	Code string // z. B. "locked", "not_found"
+	By   string // bei „locked“: Programm, das die Datei geöffnet hat
+}
 
-func (e RemoteError) Error() string { return "Sender: " + string(e) }
+func (e RemoteError) Error() string { return "Sender: " + e.Code }
+
+func remoteErr(r response) RemoteError { return RemoteError{Code: r.Error, By: r.By} }
 
 // localError: Schreiben auf diesem Rechner ist fehlgeschlagen (z. B. Platte
 // voll). Die Verbindung ist in Ordnung.
@@ -47,7 +52,7 @@ func (c *Client) Roots() ([]Root, error) {
 		return nil, err
 	}
 	if resp.Error != "" {
-		return nil, RemoteError(resp.Error)
+		return nil, remoteErr(resp)
 	}
 	return resp.Roots, nil
 }
@@ -73,7 +78,7 @@ func (c *Client) Walk(root string, fn func(Entry)) error {
 				return err
 			}
 			if resp.Error != "" {
-				return RemoteError(resp.Error)
+				return remoteErr(resp)
 			}
 			for _, e := range resp.Entries {
 				fn(e)
@@ -108,7 +113,7 @@ func (c *Client) recvRead(dst io.Writer) (int64, error) {
 		return 0, err
 	}
 	if head.Error != "" {
-		return 0, RemoteError(head.Error)
+		return 0, remoteErr(head)
 	}
 	var n int64
 	var writeErr error
@@ -130,13 +135,13 @@ func (c *Client) recvRead(dst io.Writer) (int64, error) {
 				return n, writeErr
 			}
 			if n != head.Size {
-				return n, RemoteError("file_changed")
+				return n, RemoteError{Code: "file_changed"}
 			}
 			return n, nil
 		case frameJSON:
 			var resp response
 			jsonUnmarshal(p, &resp)
-			return n, RemoteError(resp.Error)
+			return n, remoteErr(resp)
 		default:
 			return n, fmt.Errorf("unerwartete Rahmenart %q", typ)
 		}

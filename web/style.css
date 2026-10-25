@@ -197,6 +197,7 @@ input#code-input:focus-visible { border-color: var(--accent); }
   cursor: pointer;
 }
 .folder-hint { color: var(--accent-text); font-size: .85rem; }
+.panel p.folder-hint { margin: 0 0 4px; font-size: .95rem; }
 button.small { padding: 4px 10px; font-size: .9rem; white-space: nowrap; }
 .folder input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex: none; }
 .folder-text { display: flex; flex-direction: column; min-width: 0; }

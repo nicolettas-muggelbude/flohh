@@ -103,6 +103,13 @@ const messages = {
 
     "failure.read_failed": "auf dem alten Rechner nicht lesbar",
     "failure.locked": "von einem Programm geöffnet",
+    "failure.lockedBy": "von {app} geöffnet",
+    "progress.lockedByApp": {
+      one: "Gesperrt von {app}: {count} Datei",
+      other: "Gesperrt von {app}: {count} Dateien",
+    },
+    "progress.lockedHintApps": "Beende diese Programme ganz – auch im Hintergrund, z. B. über den Task-Manager – und klicke „Erneut starten“. Bereits Kopiertes wird übersprungen.",
+    "progress.edgeTip": "Microsoft Edge läuft nach dem Schließen im Hintergrund weiter. Beende ihn im Task-Manager oder schalte in Edge unter Einstellungen → System und Leistung „Startboost“ und „Erweiterungen und Apps im Hintergrund weiter ausführen“ aus.",
     "failure.access_denied": "keine Berechtigung zum Lesen",
     "progress.lockedHint": {
       one: "{count} Datei war von einem Programm geöffnet (z. B. Browser oder Mailprogramm). Schließe die Programme auf dem alten Rechner und klicke „Erneut starten“ – bereits Kopiertes wird übersprungen.",

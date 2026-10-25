@@ -29,26 +29,28 @@ const maxFailures = 20 // so viele Fehler werden einzeln aufgeführt
 
 // Progress ist der Stand einer Übertragung – für die Anzeige auf beiden Seiten.
 type Progress struct {
-	Phase        string    `json:"phase"`
-	FilesTotal   int       `json:"filesTotal"`
-	FilesDone    int       `json:"filesDone"` // kopiert
-	FilesSkipped int       `json:"filesSkipped"`
-	FilesFailed  int       `json:"filesFailed"`
-	FilesLocked  int       `json:"filesLocked"` // davon: von Programmen geöffnet
-	BytesTotal   int64     `json:"bytesTotal"`
-	BytesDone    int64     `json:"bytesDone"`   // inkl. übersprungener
-	BytesCopied  int64     `json:"bytesCopied"` // nur wirklich übertragene (für das Tempo)
-	Current      string    `json:"current,omitempty"`
-	Error        string    `json:"error,omitempty"`
-	Failures     []Failure `json:"failures,omitempty"`
-	StartedAt    int64     `json:"startedAt"` // Unix-Millisekunden
-	Speed        int64     `json:"speed"`     // Bytes/s der letzten Sekunden, gemessen beim Empfänger
+	Phase        string         `json:"phase"`
+	FilesTotal   int            `json:"filesTotal"`
+	FilesDone    int            `json:"filesDone"` // kopiert
+	FilesSkipped int            `json:"filesSkipped"`
+	FilesFailed  int            `json:"filesFailed"`
+	FilesLocked  int            `json:"filesLocked"`        // davon: von Programmen geöffnet
+	LockedBy     map[string]int `json:"lockedBy,omitempty"` // Programm → Anzahl gesperrter Dateien
+	BytesTotal   int64          `json:"bytesTotal"`
+	BytesDone    int64          `json:"bytesDone"`   // inkl. übersprungener
+	BytesCopied  int64          `json:"bytesCopied"` // nur wirklich übertragene (für das Tempo)
+	Current      string         `json:"current,omitempty"`
+	Error        string         `json:"error,omitempty"`
+	Failures     []Failure      `json:"failures,omitempty"`
+	StartedAt    int64          `json:"startedAt"` // Unix-Millisekunden
+	Speed        int64          `json:"speed"`     // Bytes/s der letzten Sekunden, gemessen beim Empfänger
 }
 
 // Failure ist eine Datei, die nicht übertragen werden konnte.
 type Failure struct {
 	Path  string `json:"path"`
 	Error string `json:"error"`
+	By    string `json:"by,omitempty"` // bei „locked“: sperrendes Programm
 }
 
 // Plan sagt, welche Freigabe in welchen Zielordner kommt.
@@ -75,6 +77,12 @@ func (e *Engine) Progress() Progress {
 	defer e.mu.Unlock()
 	p := e.p
 	p.Failures = append([]Failure(nil), e.p.Failures...)
+	if e.p.LockedBy != nil {
+		p.LockedBy = make(map[string]int, len(e.p.LockedBy))
+		for k, v := range e.p.LockedBy {
+			p.LockedBy[k] = v
+		}
+	}
 	p.Speed = speed(e.samples, p.BytesCopied, time.Now())
 	return p
 }
@@ -311,7 +319,7 @@ func (e *Engine) receive(it *item) error {
 		var le localError
 		switch {
 		case errors.As(err, &re):
-			e.failed(it.j, string(re))
+			e.failedBy(it.j, re.Code, re.By)
 		case errors.As(err, &le):
 			e.failed(it.j, "write_failed")
 		default:
@@ -333,14 +341,23 @@ func (e *Engine) receive(it *item) error {
 	return nil
 }
 
-func (e *Engine) failed(j job, code string) {
+func (e *Engine) failed(j job, code string) { e.failedBy(j, code, "") }
+
+// failedBy merkt sich eine gescheiterte Datei; by = Programm, das sie sperrt.
+func (e *Engine) failedBy(j job, code, by string) {
 	e.update(func(p *Progress) {
 		p.FilesFailed++
 		if code == errLocked {
 			p.FilesLocked++
+			if by != "" {
+				if p.LockedBy == nil {
+					p.LockedBy = map[string]int{}
+				}
+				p.LockedBy[by]++
+			}
 		}
 		if len(p.Failures) < maxFailures {
-			p.Failures = append(p.Failures, Failure{Path: j.entry.Path, Error: code})
+			p.Failures = append(p.Failures, Failure{Path: j.entry.Path, Error: code, By: by})
 		}
 	})
 }

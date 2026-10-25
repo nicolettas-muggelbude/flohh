@@ -99,7 +99,7 @@ type task struct {
 	req   request
 	ready chan struct{} // nil: wird beim Antworten erledigt (nicht vorab gelesen)
 	data  []byte        // vorab gelesene kleine Datei
-	err   string        // Fehlercode statt Inhalt
+	fail  *response     // Fehlerantwort statt Inhalt
 }
 
 // Serve beantwortet Anfragen, bis die Verbindung endet.
@@ -159,7 +159,7 @@ func (s *Server) Serve(rw io.ReadWriter) error {
 func (s *Server) prefetch(t *task, sem chan struct{}) {
 	full, err := s.resolve(t.req.Root, t.req.Path)
 	if err != nil {
-		t.err = "not_found"
+		t.fail = &response{Error: "not_found"}
 		return
 	}
 	fi, err := os.Stat(full)
@@ -173,13 +173,15 @@ func (s *Server) prefetch(t *task, sem chan struct{}) {
 		defer func() { <-sem }()
 		f, err := openFile(full)
 		if err != nil {
-			t.err = readErrCode(err)
+			r := readError(err, full)
+			t.fail = &r
 			return
 		}
 		defer f.Close()
 		data, err := io.ReadAll(io.LimitReader(f, smallFile+1))
 		if err != nil {
-			t.err = readErrCode(err)
+			r := readError(err, full)
+			t.fail = &r
 			return
 		}
 		t.data = data
@@ -196,8 +198,8 @@ func (s *Server) answer(w *wire, t *task) error {
 		if t.ready != nil {
 			<-t.ready
 		}
-		if t.err != "" {
-			return w.writeJSON(response{Error: t.err})
+		if t.fail != nil {
+			return w.writeJSON(*t.fail)
 		}
 		if t.ready == nil {
 			return s.read(w, t.req.Root, t.req.Path, t.req.Offset)
@@ -295,7 +297,7 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 	}
 	f, err := openFile(full)
 	if err != nil {
-		return w.writeJSON(response{Error: readErrCode(err)})
+		return w.writeJSON(readError(err, full))
 	}
 	defer f.Close()
 	fi, err := f.Stat()
@@ -324,7 +326,7 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 		if rerr != nil {
 			// Lesefehler mitten in der Datei (z. B. Bereich gesperrt):
 			// statt „Ende“ ein Fehler.
-			return w.writeJSON(response{Error: readErrCode(rerr)})
+			return w.writeJSON(readError(rerr, full))
 		}
 	}
 	return w.writeFrame(frameEnd, nil)

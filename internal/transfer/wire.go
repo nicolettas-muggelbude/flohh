@@ -98,6 +98,7 @@ type request struct {
 // von Datenrahmen).
 type response struct {
 	Error   string  `json:"error,omitempty"`
+	By      string  `json:"by,omitempty"` // bei „locked“: Programm, das die Datei geöffnet hat
 	Roots   []Root  `json:"roots,omitempty"`
 	Entries []Entry `json:"entries,omitempty"`
 	Size    int64   `json:"size,omitempty"`

@@ -396,7 +396,17 @@ function renderProgress(box, p, stopping, skipped) {
   add("progress-line", t("progress.summary", {
     copied: p.filesDone, skipped: p.filesSkipped, failed: p.filesFailed,
   }));
-  if (p.filesLocked) add("folder-hint", t("progress.lockedHint", { count: p.filesLocked }));
+  if (p.filesLocked) {
+    const apps = Object.entries(p.lockedBy || {}).sort((a, b) => b[1] - a[1]);
+    if (apps.length) {
+      // Windows hat gesagt, welche Programme die Dateien offen halten.
+      for (const [app, count] of apps) add("folder-hint", t("progress.lockedByApp", { app, count }));
+      if (apps.some(([app]) => /edge/i.test(app))) add("progress-line muted", t("progress.edgeTip"));
+      add("progress-line muted", t("progress.lockedHintApps"));
+    } else {
+      add("folder-hint", t("progress.lockedHint", { count: p.filesLocked }));
+    }
+  }
   if (skipped && (skipped.system || skipped.cloud)) {
     const parts = [];
     if (skipped.system) parts.push(t("progress.skippedSystem", { count: skipped.system }));
@@ -410,7 +420,8 @@ function renderProgress(box, p, stopping, skipped) {
     ul.className = "failures";
     for (const f of p.failures) {
       const li = document.createElement("li");
-      li.textContent = `${f.path} – ${failureText(f.error)}`;
+      const why = f.by ? t("failure.lockedBy", { app: f.by }) : failureText(f.error);
+      li.textContent = `${f.path} – ${why}`;
       ul.append(li);
     }
     box.append(ul);

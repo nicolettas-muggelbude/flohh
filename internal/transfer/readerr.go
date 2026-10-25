@@ -25,3 +25,16 @@ func readErrCode(err error) string {
 		return errReadFailed
 	}
 }
+
+// readError liefert die Fehlerantwort für eine Datei; bei gesperrten Dateien
+// mit dem Programm, das sie geöffnet hat (unter Windows).
+func readError(err error, path string) response {
+	code := readErrCode(err)
+	r := response{Error: code}
+	if code == errLocked {
+		if names := lockedBy(path); len(names) > 0 {
+			r.By = names[0]
+		}
+	}
+	return r
+}
