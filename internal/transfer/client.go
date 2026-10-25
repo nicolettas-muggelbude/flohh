@@ -90,9 +90,19 @@ func (c *Client) Walk(root string, fn func(Entry)) error {
 func (c *Client) Read(root, path string, off int64, progress *Progress, dst io.Writer) (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if err := c.send(request{Op: "read", Root: root, Path: path, Offset: off, Progress: progress}); err != nil {
+	if err := c.sendRead(root, path, off, progress); err != nil {
 		return 0, err
 	}
+	return c.recvRead(dst)
+}
+
+// sendRead und recvRead sind die beiden Hälften von Read. Die Engine
+// benutzt sie getrennt, um Anfragen vorauszuschicken (c.mu hält sie selbst).
+func (c *Client) sendRead(root, path string, off int64, progress *Progress) error {
+	return c.send(request{Op: "read", Root: root, Path: path, Offset: off, Progress: progress})
+}
+
+func (c *Client) recvRead(dst io.Writer) (int64, error) {
 	var head response
 	if err := c.w.readJSON(&head); err != nil {
 		return 0, err

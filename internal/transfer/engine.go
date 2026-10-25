@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -108,15 +109,12 @@ func (e *Engine) Run(ctx context.Context, plans []Plan) error {
 	}
 
 	e.update(func(p *Progress) { p.Phase = PhaseCopying })
-	for _, j := range jobs {
-		if ctx.Err() != nil {
-			e.update(func(p *Progress) { p.Phase, p.Current = PhaseCancelled, "" })
-			return ctx.Err()
-		}
-		e.update(func(p *Progress) { p.Current = j.entry.Path })
-		if err := e.copyOne(j); err != nil {
-			return e.fail(ctx, err)
-		}
+	if err := e.copyAll(ctx, jobs); err != nil {
+		return e.fail(ctx, err)
+	}
+	if ctx.Err() != nil {
+		e.update(func(p *Progress) { p.Phase, p.Current = PhaseCancelled, "" })
+		return ctx.Err()
 	}
 
 	e.update(func(p *Progress) { p.Phase, p.Current = PhaseDone, "" })
@@ -138,68 +136,157 @@ func (e *Engine) fail(ctx context.Context, err error) error {
 	return err
 }
 
-// copyOne überträgt eine Datei. Ein Fehler als Rückgabe heißt: Verbindung
-// weg, alles abbrechen. Probleme mit der einzelnen Datei landen in Failures.
-func (e *Engine) copyOne(j job) error {
-	rel, err := cleanRel(j.entry.Path)
-	if err != nil {
-		e.failed(j, "invalid_path")
-		return nil
-	}
-	dst := filepath.Join(j.target, targetRel(rel, e.windows))
+// pipeWindow: so viele Dateien fragt der Empfänger höchstens voraus an.
+const pipeWindow = 32
 
-	if fi, err := os.Stat(dst); err == nil {
-		if sameFile(fi, j.entry) {
+// item ist eine geplante Datei: überspringen, als Fehler melden oder abholen.
+type item struct {
+	j     job
+	dst   string // Zielpfad (beim Abholen)
+	skip  bool   // gleich schon vorhanden
+	fail  string // Fehlercode, ohne Anfrage
+	fetch bool   // Anfrage ist unterwegs
+}
+
+// copyAll überträgt alle Dateien. Ein Fehler als Rückgabe heißt: Verbindung
+// weg. Probleme einzelner Dateien landen in Failures.
+//
+// Ein Helfer plant die Dateien und schickt die Anfragen voraus (höchstens
+// pipeWindow offen); hier werden die Antworten der Reihe nach gespeichert.
+// So wartet keine Seite auf die andere.
+func (e *Engine) copyAll(ctx context.Context, jobs []job) error {
+	e.c.mu.Lock()
+	defer e.c.mu.Unlock()
+
+	items := make(chan *item, pipeWindow)
+	slots := make(chan struct{}, pipeWindow)
+	stop := make(chan struct{})
+	defer close(stop)
+	sendErr := make(chan error, 1)
+
+	go func() {
+		defer close(items)
+		reserved := map[string]bool{} // Ziele, die schon vergeben sind
+		for _, j := range jobs {
+			if ctx.Err() != nil {
+				return // anhalten: keine neuen Anfragen mehr
+			}
+			it := e.plan(j, reserved)
+			if it.fetch {
+				select {
+				case slots <- struct{}{}:
+				case <-stop:
+					return
+				}
+				pr := e.Progress()
+				if err := e.c.sendRead(j.root, j.entry.Path, 0, &pr); err != nil {
+					sendErr <- err
+					return
+				}
+			}
+			select {
+			case items <- it:
+			case <-stop:
+				return
+			}
+		}
+	}()
+
+	for it := range items {
+		switch {
+		case it.skip:
 			// Schon da (z. B. vom abgebrochenen Lauf davor): überspringen.
 			e.update(func(p *Progress) {
 				p.FilesSkipped++
-				p.BytesDone += j.entry.Size
+				p.BytesDone += it.j.entry.Size
 			})
-			return nil
+		case it.fail != "":
+			e.failed(it.j, it.fail)
+		default:
+			e.update(func(p *Progress) { p.Current = it.j.entry.Path })
+			err := e.receive(it)
+			<-slots
+			if err != nil {
+				return err
+			}
 		}
-		dst = freeName(dst) // nie überschreiben
 	}
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		e.failed(j, "write_failed")
+	select {
+	case err := <-sendErr:
+		return err
+	default:
 		return nil
 	}
+}
+
+// plan entscheidet für eine Datei: überspringen, Fehler oder abholen – und
+// unter welchem Namen. reserved verhindert, dass zwei Dateien desselben Laufs
+// denselben Namen bekommen (z. B. „Ü“ zerlegt und zusammengesetzt).
+func (e *Engine) plan(j job, reserved map[string]bool) *item {
+	rel, err := cleanRel(j.entry.Path)
+	if err != nil {
+		return &item{j: j, fail: "invalid_path"}
+	}
+	dst := filepath.Join(j.target, targetRel(rel, e.windows))
+	fi, statErr := os.Stat(dst)
+	if statErr == nil && !reserved[dst] && sameFile(fi, j.entry) {
+		return &item{j: j, skip: true}
+	}
+	if statErr == nil || reserved[dst] {
+		dst = freeNameExcept(dst, reserved) // nie überschreiben
+	}
+	reserved[dst] = true
+	return &item{j: j, dst: dst, fetch: true}
+}
+
+// receive speichert die Antwort auf eine vorausgeschickte Anfrage. Auch wenn
+// hier nicht geschrieben werden kann, wird die Antwort ganz gelesen – sonst
+// geriete die Verbindung aus dem Takt.
+func (e *Engine) receive(it *item) error {
 	// Erst unter Hilfsnamen schreiben: Ein Abbruch hinterlässt so keine
 	// halbe Datei unter dem richtigen Namen.
-	tmp := dst + ".flohh-teil"
-	f, err := os.Create(tmp)
-	if err != nil {
-		e.failed(j, "write_failed")
-		return nil
+	tmp := it.dst + ".flohh-teil"
+	var f *os.File
+	var w io.Writer = io.Discard
+	localFail := os.MkdirAll(filepath.Dir(it.dst), 0o755)
+	if localFail == nil {
+		if f, localFail = os.Create(tmp); localFail == nil {
+			w = f
+		}
 	}
-	pr := e.Progress()
-	n, err := e.c.Read(j.root, j.entry.Path, 0, &pr, progressWriter{f, e})
-	closeErr := f.Close()
-	if err == nil && closeErr != nil {
-		err = localError{closeErr}
+	n, err := e.c.recvRead(progressWriter{w, e})
+	if f != nil {
+		if closeErr := f.Close(); err == nil && closeErr != nil {
+			err = localError{closeErr}
+		}
+	}
+	if err == nil && localFail != nil {
+		err = localError{localFail}
 	}
 	if err != nil {
-		os.Remove(tmp)
+		if f != nil {
+			os.Remove(tmp)
+		}
 		var re RemoteError
 		var le localError
 		switch {
 		case errors.As(err, &re):
-			e.failed(j, string(re))
+			e.failed(it.j, string(re))
 		case errors.As(err, &le):
-			e.failed(j, "write_failed")
+			e.failed(it.j, "write_failed")
 		default:
 			return err // Verbindung weg
 		}
 		// Rest der Datei als „erledigt“ zählen, damit der Balken voll wird.
-		e.update(func(p *Progress) { p.BytesDone += max(0, j.entry.Size-n) })
+		e.update(func(p *Progress) { p.BytesDone += max(0, it.j.entry.Size-n) })
 		return nil
 	}
 
-	mtime := time.Unix(j.entry.MTime, 0)
+	mtime := time.Unix(it.j.entry.MTime, 0)
 	os.Chtimes(tmp, mtime, mtime)
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := os.Rename(tmp, it.dst); err != nil {
 		os.Remove(tmp)
-		e.failed(j, "write_failed")
+		e.failed(it.j, "write_failed")
 		return nil
 	}
 	e.update(func(p *Progress) { p.FilesDone++ })
@@ -220,12 +307,12 @@ func (e *Engine) failed(j job, code string) {
 
 // progressWriter zählt geschriebene Bytes in den Fortschritt.
 type progressWriter struct {
-	f *os.File
+	w io.Writer
 	e *Engine
 }
 
 func (w progressWriter) Write(p []byte) (int, error) {
-	n, err := w.f.Write(p)
+	n, err := w.w.Write(p)
 	w.e.update(func(pr *Progress) {
 		pr.BytesDone += int64(n)
 		pr.BytesCopied += int64(n)
@@ -241,7 +328,11 @@ func sameFile(fi os.FileInfo, en Entry) bool {
 }
 
 // freeName liefert einen freien Namen: „Urlaub.jpg“ → „Urlaub (2).jpg“ …
-func freeName(p string) string {
+func freeName(p string) string { return freeNameExcept(p, nil) }
+
+// freeNameExcept wie freeName, meidet aber auch Namen aus reserved (in
+// diesem Lauf schon vergeben, aber noch nicht geschrieben).
+func freeNameExcept(p string, reserved map[string]bool) string {
 	dir, name := filepath.Split(p)
 	ext := filepath.Ext(name)
 	base := strings.TrimSuffix(name, ext)
@@ -250,7 +341,7 @@ func freeName(p string) string {
 	}
 	for i := 2; ; i++ {
 		cand := filepath.Join(dir, fmt.Sprintf("%s (%d)%s", base, i, ext))
-		if _, err := os.Lstat(cand); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Lstat(cand); errors.Is(err, os.ErrNotExist) && !reserved[cand] {
 			return cand
 		}
 	}

@@ -24,8 +24,7 @@ type Server struct {
 type share struct {
 	name  string
 	path  string
-	files int
-	bytes int64
+	stats Stats
 	ready bool
 }
 
@@ -56,17 +55,11 @@ func (s *Server) Share(list []Share) {
 }
 
 func (s *Server) count(gen int, sh *share) {
-	var files int
-	var bytes int64
-	walkFiles(sh.path, func(_ string, fi fs.FileInfo) error {
-		files++
-		bytes += fi.Size()
-		return nil
-	})
+	st := Count(sh.path)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.gen == gen {
-		sh.files, sh.bytes, sh.ready = files, bytes, true
+		sh.stats, sh.ready = st, true
 	}
 }
 
@@ -77,7 +70,7 @@ func (s *Server) Roots() []Root {
 	out := []Root{}
 	for _, id := range s.order {
 		sh := s.shares[id]
-		out = append(out, Root{ID: id, Name: sh.name, Source: sh.path, Files: sh.files, Bytes: sh.bytes, Ready: sh.ready})
+		out = append(out, Root{ID: id, Name: sh.name, Source: sh.path, Stats: sh.stats, Ready: sh.ready})
 	}
 	return out
 }
@@ -91,42 +84,140 @@ func (s *Server) Status() (p Progress, finished bool) {
 	return p, s.finished
 }
 
+// Tempo bei vielen kleinen Dateien: Der Empfänger schickt Anfragen voraus.
+// Kleine Dateien liest der Sender dann schon parallel ein (das Öffnen kostet
+// unter Windows wegen des Virenscanners spürbar Zeit), beantwortet wird
+// trotzdem streng der Reihe nach.
+const (
+	smallFile = 1 << 20 // bis 1 MiB: vorab in den Speicher lesen
+	readAhead = 8       // so viele kleine Dateien gleichzeitig öffnen
+	maxQueued = 64      // so viele Anfragen höchstens in Arbeit (≤ 64 MiB)
+)
+
+// task ist eine Anfrage in Arbeit.
+type task struct {
+	req   request
+	ready chan struct{} // nil: wird beim Antworten erledigt (nicht vorab gelesen)
+	data  []byte        // vorab gelesene kleine Datei
+	err   string        // Fehlercode statt Inhalt
+}
+
 // Serve beantwortet Anfragen, bis die Verbindung endet.
 func (s *Server) Serve(rw io.ReadWriter) error {
 	w := newWire(rw)
-	for {
-		var req request
-		if err := w.readJSON(&req); err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil
+	tasks := make(chan *task, maxQueued)
+	done := make(chan struct{})
+	defer close(done)
+	readErr := make(chan error, 1)
+	sem := make(chan struct{}, readAhead)
+
+	// Anfragen lesen und kleine Dateien schon einmal anfangen zu lesen.
+	go func() {
+		defer close(tasks)
+		for {
+			var req request
+			if err := w.readJSON(&req); err != nil {
+				readErr <- err
+				return
 			}
+			if req.Progress != nil {
+				s.mu.Lock()
+				s.progress = *req.Progress
+				s.finished = s.finished || req.Op == "done"
+				s.mu.Unlock()
+			}
+			t := &task{req: req}
+			if req.Op == "read" {
+				s.prefetch(t, sem)
+			}
+			select {
+			case tasks <- t:
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	// Antworten der Reihe nach schreiben.
+	for t := range tasks {
+		if err := s.answer(w, t); err != nil {
 			return err
 		}
-		if req.Progress != nil {
-			s.mu.Lock()
-			s.progress = *req.Progress
-			s.finished = s.finished || req.Op == "done"
-			s.mu.Unlock()
+		if len(tasks) == 0 { // nichts mehr in der Schlange: abschicken
+			if err := w.flush(); err != nil {
+				return err
+			}
 		}
-		var err error
-		switch req.Op {
-		case "roots":
-			err = w.writeJSON(response{Roots: s.Roots()})
-		case "walk":
-			err = s.walk(w, req.Root)
-		case "read":
-			err = s.read(w, req.Root, req.Path, req.Offset)
-		case "done":
-			err = w.writeJSON(response{})
-		default:
-			err = w.writeJSON(response{Error: "unknown_op"})
-		}
-		if err == nil {
-			err = w.flush()
-		}
+	}
+	if err := <-readErr; !errors.Is(err, io.EOF) {
+		return err
+	}
+	return w.flush()
+}
+
+// prefetch liest eine kleine Datei im Hintergrund in den Speicher.
+func (s *Server) prefetch(t *task, sem chan struct{}) {
+	full, err := s.resolve(t.req.Root, t.req.Path)
+	if err != nil {
+		t.err = "not_found"
+		return
+	}
+	fi, err := os.Stat(full)
+	if err != nil || !fi.Mode().IsRegular() || fi.Size() > smallFile || t.req.Offset != 0 {
+		return // groß oder ungewöhnlich: beim Antworten direkt streamen
+	}
+	t.ready = make(chan struct{})
+	go func() {
+		defer close(t.ready)
+		sem <- struct{}{}
+		defer func() { <-sem }()
+		f, err := openFile(full)
 		if err != nil {
+			t.err = readErrCode(err)
+			return
+		}
+		defer f.Close()
+		data, err := io.ReadAll(io.LimitReader(f, smallFile+1))
+		if err != nil {
+			t.err = readErrCode(err)
+			return
+		}
+		t.data = data
+	}()
+}
+
+func (s *Server) answer(w *wire, t *task) error {
+	switch t.req.Op {
+	case "roots":
+		return w.writeJSON(response{Roots: s.Roots()})
+	case "walk":
+		return s.walk(w, t.req.Root)
+	case "read":
+		if t.ready != nil {
+			<-t.ready
+		}
+		if t.err != "" {
+			return w.writeJSON(response{Error: t.err})
+		}
+		if t.ready == nil {
+			return s.read(w, t.req.Root, t.req.Path, t.req.Offset)
+		}
+		if err := w.writeJSON(response{Size: int64(len(t.data))}); err != nil {
 			return err
 		}
+		for p := t.data; len(p) > 0; {
+			n := min(len(p), chunkSize)
+			if err := w.writeFrame(frameData, p[:n]); err != nil {
+				return err
+			}
+			p = p[n:]
+		}
+		t.data = nil
+		return w.writeFrame(frameEnd, nil)
+	case "done":
+		return w.writeJSON(response{})
+	default:
+		return w.writeJSON(response{Error: "unknown_op"})
 	}
 }
 
@@ -160,7 +251,7 @@ func (s *Server) walk(w *wire, id string) error {
 			return send()
 		}
 		return nil
-	})
+	}, nil)
 	if err == nil {
 		err = send()
 	}
@@ -202,7 +293,7 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 	if err != nil {
 		return w.writeJSON(response{Error: "not_found"})
 	}
-	f, err := os.Open(full)
+	f, err := openFile(full)
 	if err != nil {
 		return w.writeJSON(response{Error: readErrCode(err)})
 	}
@@ -239,29 +330,59 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 	return w.writeFrame(frameEnd, nil)
 }
 
-// Count zählt Dateien und Bytes unter dir – so, wie sie übertragen würden.
-func Count(dir string) (files int, bytes int64) {
-	walkFiles(dir, func(_ string, fi fs.FileInfo) error {
-		files++
-		bytes += fi.Size()
-		return nil
-	})
-	return files, bytes
+// openFile öffnet eine Datei zum Lesen. Als Variable, damit Messläufe die
+// Verzögerung eines Virenscanners nachstellen können.
+var openFile = os.Open
+
+// Stats zählt einen Ordner so, wie er übertragen würde – und was dabei
+// bewusst wegbleibt.
+type Stats struct {
+	Files  int   `json:"files"`
+	Bytes  int64 `json:"bytes"`
+	System int   `json:"system"` // Systemdateien (desktop.ini, Thumbs.db, .DS_Store)
+	Cloud  int   `json:"cloud"`  // nur in der Cloud (OneDrive „Nur online verfügbar“)
 }
+
+// Count zählt Dateien und Bytes unter dir.
+func Count(dir string) Stats {
+	var st Stats
+	walkFiles(dir, func(_ string, fi fs.FileInfo) error {
+		st.Files++
+		st.Bytes += fi.Size()
+		return nil
+	}, &st)
+	return st
+}
+
+// isCloudOnly ist eine Variable, damit Tests Cloud-Dateien nachstellen können.
+var isCloudOnly = cloudOnly
 
 // walkFiles ruft fn für jede normale Datei unter root auf (Pfad relativ, mit
 // „/“). Unlesbare Ordner, Verknüpfungen, Systemdateien und Dateien, die nur
-// in der Cloud liegen, werden übersprungen. Fehler von fn brechen ab.
-func walkFiles(root string, fn func(rel string, fi fs.FileInfo) error) error {
+// in der Cloud liegen, werden übersprungen (gezählt in skipped, falls nicht
+// nil). Fehler von fn brechen ab.
+func walkFiles(root string, fn func(rel string, fi fs.FileInfo) error, skipped *Stats) error {
 	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil // unlesbarer Ordner: Inhalt überspringen
 		}
-		if !d.Type().IsRegular() || skipName(d.Name()) {
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if skipName(d.Name()) {
+			if skipped != nil {
+				skipped.System++
+			}
 			return nil
 		}
 		fi, err := d.Info()
-		if err != nil || cloudOnly(fi) {
+		if err != nil {
+			return nil
+		}
+		if isCloudOnly(fi) {
+			if skipped != nil {
+				skipped.Cloud++
+			}
 			return nil
 		}
 		rel, err := filepath.Rel(root, p)

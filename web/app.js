@@ -144,7 +144,13 @@ function renderSender() {
   const busy = p && (p.phase === "listing" || p.phase === "copying");
   el("share-status-text").textContent =
     !p ? t("share.waiting", { names }) : busy ? t("share.receiving") : t("share.finished");
-  renderProgress(el("send-progress"), move.progress, false);
+  renderProgress(el("send-progress"), move.progress, false, skippedIn(move.folders.filter((f) => f.shared)));
+}
+
+// skippedIn: bewusst weggelassene Dateien der beteiligten Ordner.
+function skippedIn(list) {
+  return list.reduce((s, f) => ({ system: s.system + (f.system || 0), cloud: s.cloud + (f.cloud || 0) }),
+    { system: 0, cloud: 0 });
 }
 
 function renderReceiver() {
@@ -156,7 +162,8 @@ function renderReceiver() {
   }
   el("offer-wait").textContent = move.folders.length ? "" : t("offer.wait");
   el("start-button").disabled = !move.folders.length;
-  renderProgress(el("recv-progress-box"), move.progress, move.stopping);
+  renderProgress(el("recv-progress-box"), move.progress, move.stopping,
+    skippedIn(move.folders.filter((f) => offerSel.has(f.id))));
   el("stop-button").hidden = !move.running;
   el("again-button").hidden = move.running;
 }
@@ -204,9 +211,10 @@ function folderRows(container, list, sel, mode) {
       text.append(span("folder-hint", t("folder.appdataHint")));
     }
 
-    const size = f.ready
+    let size = f.ready
       ? `${t("folder.files", { count: f.files })} · ${formatBytes(f.bytes)}`
       : t("folder.counting");
+    if (f.ready && f.cloud) size += ` · ${t("folder.cloud", { count: f.cloud })}`;
     label.append(cb, text, span("folder-size", size));
     row.append(label);
 
@@ -348,7 +356,7 @@ function currentSpeed(box, p) {
 }
 
 // renderProgress zeigt Balken, Zahlen, aktuelle Datei bzw. Ergebnis.
-function renderProgress(box, p, stopping) {
+function renderProgress(box, p, stopping, skipped) {
   box.replaceChildren();
   if (!p) return;
   const add = (cls, text) => {
@@ -407,6 +415,13 @@ function renderProgress(box, p, stopping) {
     copied: p.filesDone, skipped: p.filesSkipped, failed: p.filesFailed,
   }));
   if (p.filesLocked) add("folder-hint", t("progress.lockedHint", { count: p.filesLocked }));
+  if (skipped && (skipped.system || skipped.cloud)) {
+    const parts = [];
+    if (skipped.system) parts.push(t("progress.skippedSystem", { count: skipped.system }));
+    if (skipped.cloud) parts.push(t("progress.skippedCloud", { count: skipped.cloud }));
+    add("progress-line muted", `${t("progress.skippedLabel")} ${parts.join(" · ")}`);
+    if (skipped.cloud) add("progress-line muted", t("progress.cloudHint"));
+  }
   if (p.failures && p.failures.length) {
     add("progress-line", t("progress.failures"));
     const ul = document.createElement("ul");

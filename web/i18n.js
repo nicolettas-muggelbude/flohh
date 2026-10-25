@@ -52,6 +52,7 @@ const messages = {
     "folder.downloads": "Downloads",
     "folder.files": { one: "{count} Datei", other: "{count} Dateien" },
     "folder.counting": "wird gezählt …",
+    "folder.cloud": { one: "{count} nur in der Cloud", other: "{count} nur in der Cloud" },
     "folder.target": "kommt nach {path}",
     "folder.from": "vom alten Rechner: {path}",
     "folder.remove": "Entfernen",
@@ -95,6 +96,10 @@ const messages = {
     "progress.cancelled": "Angehalten. Ein neuer Start setzt fort – was schon da ist, wird übersprungen.",
     "progress.failed": "Abgebrochen: Die Verbindung zum anderen Rechner ist weg.",
     "progress.failures": "Diese Dateien konnten nicht übertragen werden:",
+    "progress.skippedLabel": "Bewusst weggelassen:",
+    "progress.skippedSystem": { one: "{count} Systemdatei (z. B. desktop.ini)", other: "{count} Systemdateien (z. B. desktop.ini)" },
+    "progress.skippedCloud": { one: "{count} Datei nur in der Cloud", other: "{count} Dateien nur in der Cloud" },
+    "progress.cloudHint": "Dateien, die nur in der Cloud liegen (z. B. OneDrive „Nur online verfügbar“), holst du am besten auf dem neuen Rechner direkt aus der Cloud.",
 
     "failure.read_failed": "auf dem alten Rechner nicht lesbar",
     "failure.locked": "von einem Programm geöffnet",

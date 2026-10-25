@@ -37,17 +37,16 @@ func (e *Error) Error() string { return e.Code }
 
 // Folder ist ein Ordner in der Anzeige.
 type Folder struct {
-	ID      string       `json:"id"`             // Art (documents …) oder custom-N
-	Kind    folders.Kind `json:"kind,omitempty"` // leer bei eigenen Ordnern
-	Name    string       `json:"name,omitempty"` // Ordnername bei eigenen Ordnern
-	Source  string       `json:"source"`         // Pfad auf dem alten Rechner
-	Target  string       `json:"target,omitempty"`
-	Files   int          `json:"files"`
-	Bytes   int64        `json:"bytes"`
-	Ready   bool         `json:"ready"`             // Zählung fertig
-	Shared  bool         `json:"shared,omitempty"`  // Sender: freigegeben
-	Custom  bool         `json:"custom,omitempty"`  // eigener Ordner
-	AppData bool         `json:"appdata,omitempty"` // Programmeinstellungen von Windows
+	ID             string       `json:"id"`             // Art (documents …) oder custom-N
+	Kind           folders.Kind `json:"kind,omitempty"` // leer bei eigenen Ordnern
+	Name           string       `json:"name,omitempty"` // Ordnername bei eigenen Ordnern
+	Source         string       `json:"source"`         // Pfad auf dem alten Rechner
+	Target         string       `json:"target,omitempty"`
+	transfer.Stats              // Dateien, Bytes, bewusst Weggelassenes
+	Ready          bool         `json:"ready"`             // Zählung fertig
+	Shared         bool         `json:"shared,omitempty"`  // Sender: freigegeben
+	Custom         bool         `json:"custom,omitempty"`  // eigener Ordner
+	AppData        bool         `json:"appdata,omitempty"` // Programmeinstellungen von Windows
 }
 
 // State ist der Stand für die Oberfläche.
@@ -126,12 +125,12 @@ func (c *Coordinator) addKnown() {
 
 // count zählt einen Ordner des Senders im Hintergrund.
 func (c *Coordinator) count(id, path string) {
-	files, bytes := transfer.Count(path)
+	st := transfer.Count(path)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for i := range c.local {
 		if c.local[i].ID == id {
-			c.local[i].Files, c.local[i].Bytes, c.local[i].Ready = files, bytes, true
+			c.local[i].Stats, c.local[i].Ready = st, true
 		}
 	}
 }
@@ -249,7 +248,7 @@ func (c *Coordinator) State() State {
 	case c.role == peer.RoleReceive:
 		for _, r := range c.offer {
 			f := Folder{ID: r.ID, Name: r.Name, Source: r.Source, Target: c.target(r),
-				Files: r.Files, Bytes: r.Bytes, Ready: r.Ready, AppData: isAppData(r.Source)}
+				Stats: r.Stats, Ready: r.Ready, AppData: isAppData(r.Source)}
 			if k := folders.Kind(r.ID); folders.Valid(k) {
 				f.Kind = k
 			} else {

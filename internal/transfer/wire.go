@@ -109,8 +109,7 @@ type Root struct {
 	ID     string `json:"id"`
 	Name   string `json:"name,omitempty"`   // Ordnername (für eigene Ordner)
 	Source string `json:"source,omitempty"` // Pfad auf dem alten Rechner (zur Anzeige)
-	Files  int    `json:"files"`
-	Bytes  int64  `json:"bytes"`
+	Stats         // Dateien, Bytes, bewusst Weggelassenes
 	Ready  bool   `json:"ready"` // Zählung fertig
 }
 
