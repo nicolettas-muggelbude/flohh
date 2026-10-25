@@ -18,8 +18,9 @@
 ## 🚀 Erste Vorabversion: Daten springen von Rechner zu Rechner!
 
 **flohh v0.1.0** zieht deine Daten vom alten auf den neuen Rechner um – ohne
-Installation, ohne Cloud, ohne Konto. Ein Programm auf beiden Rechnern, ein
-Kabel dazwischen (oder dasselbe Netz), ein Code – fertig.
+Installation, ohne Cloud, ohne Konto, ohne externes Laufwerk (HDD/SSD). Ein
+Programm auf beiden Rechnern, ein Kabel dazwischen (oder dasselbe Netz), ein
+Code – fertig.
 
 **Wie ein Floh mit einem Satz von Hund zu Hund springt, springen deine Daten
 jetzt von Rechner zu Rechner.** 🐾
