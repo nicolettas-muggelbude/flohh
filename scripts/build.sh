@@ -4,8 +4,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Version aus git: Tag, sonst Commit-Kürzel; "-dirty" bei ungespeicherten Änderungen
+# Version aus git: Tag (z. B. v0.1.0), sonst Commit-Kürzel; "-dirty" bei
+# ungespeicherten Änderungen, "v0.1.0-3-gabc1234" für Stände nach einem Tag.
 VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+
+# Windows will als Dateiversion nur Zahlen: aus "v0.1.0…" wird "0.1.0".
+FILEVER=0.0.0
+if [[ $VERSION =~ ^v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+  FILEVER=${BASH_REMATCH[1]}
+fi
 
 TARGETS=(
   windows/amd64
@@ -25,7 +32,7 @@ go run github.com/tc-hib/go-winres@v0.3.3 simply \
   --icon assets/logo/flohh.ico --manifest cli \
   --product-name flohh --file-description "flohh – Daten springen von Rechner zu Rechner" \
   --original-filename flohh.exe --copyright "© 2026 Nicoletta · GPLv3" \
-  --file-version 0.0.0 --product-version "$VERSION"
+  --file-version "$FILEVER" --product-version "$VERSION"
 
 mkdir -p dist
 for target in "${TARGETS[@]}"; do
