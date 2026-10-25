@@ -33,6 +33,7 @@ type Progress struct {
 	FilesDone    int       `json:"filesDone"` // kopiert
 	FilesSkipped int       `json:"filesSkipped"`
 	FilesFailed  int       `json:"filesFailed"`
+	FilesLocked  int       `json:"filesLocked"` // davon: von Programmen geöffnet
 	BytesTotal   int64     `json:"bytesTotal"`
 	BytesDone    int64     `json:"bytesDone"`   // inkl. übersprungener
 	BytesCopied  int64     `json:"bytesCopied"` // nur wirklich übertragene (für das Tempo)
@@ -208,6 +209,9 @@ func (e *Engine) copyOne(j job) error {
 func (e *Engine) failed(j job, code string) {
 	e.update(func(p *Progress) {
 		p.FilesFailed++
+		if code == errLocked {
+			p.FilesLocked++
+		}
 		if len(p.Failures) < maxFailures {
 			p.Failures = append(p.Failures, Failure{Path: j.entry.Path, Error: code})
 		}

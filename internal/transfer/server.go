@@ -204,7 +204,7 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 	}
 	f, err := os.Open(full)
 	if err != nil {
-		return w.writeJSON(response{Error: "read_failed"})
+		return w.writeJSON(response{Error: readErrCode(err)})
 	}
 	defer f.Close()
 	fi, err := f.Stat()
@@ -231,8 +231,9 @@ func (s *Server) read(w *wire, id, rel string, off int64) error {
 			break
 		}
 		if rerr != nil {
-			// Lesefehler mitten in der Datei: statt „Ende“ ein Fehler.
-			return w.writeJSON(response{Error: "read_failed"})
+			// Lesefehler mitten in der Datei (z. B. Bereich gesperrt):
+			// statt „Ende“ ein Fehler.
+			return w.writeJSON(response{Error: readErrCode(rerr)})
 		}
 	}
 	return w.writeFrame(frameEnd, nil)

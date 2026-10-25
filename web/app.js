@@ -406,6 +406,7 @@ function renderProgress(box, p, stopping) {
   add("progress-line", t("progress.summary", {
     copied: p.filesDone, skipped: p.filesSkipped, failed: p.filesFailed,
   }));
+  if (p.filesLocked) add("folder-hint", t("progress.lockedHint", { count: p.filesLocked }));
   if (p.failures && p.failures.length) {
     add("progress-line", t("progress.failures"));
     const ul = document.createElement("ul");

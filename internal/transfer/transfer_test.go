@@ -142,6 +142,29 @@ func TestNoEscape(t *testing.T) {
 	}
 }
 
+// Eine Datei ohne Leserecht wird als „keine Berechtigung“ gemeldet, die
+// Übertragung läuft für die übrigen Dateien weiter.
+func TestAccessDenied(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("braucht Unix-Rechte und keinen Administrator")
+	}
+	src, dst := t.TempDir(), t.TempDir()
+	write(t, filepath.Join(src, "ok.txt"), []byte("ok"), time.Now())
+	write(t, filepath.Join(src, "geheim.txt"), []byte("geheim"), time.Now())
+	os.Chmod(filepath.Join(src, "geheim.txt"), 0)
+
+	s := NewServer()
+	s.Share([]Share{{ID: "documents", Path: src}})
+	e := NewEngine(connect(t, s))
+	if err := e.Run(context.Background(), []Plan{{Root: "documents", Target: dst}}); err != nil {
+		t.Fatal(err)
+	}
+	p := e.Progress()
+	if p.FilesDone != 1 || p.FilesFailed != 1 || len(p.Failures) != 1 || p.Failures[0].Error != errAccessDenied {
+		t.Errorf("Fortschritt: %+v", p)
+	}
+}
+
 func TestWindowsName(t *testing.T) {
 	cases := map[string]string{
 		"Notiz: wichtig?.txt": "Notiz_ wichtig_.txt",

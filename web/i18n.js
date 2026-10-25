@@ -97,6 +97,12 @@ const messages = {
     "progress.failures": "Diese Dateien konnten nicht übertragen werden:",
 
     "failure.read_failed": "auf dem alten Rechner nicht lesbar",
+    "failure.locked": "von einem Programm geöffnet",
+    "failure.access_denied": "keine Berechtigung zum Lesen",
+    "progress.lockedHint": {
+      one: "{count} Datei war von einem Programm geöffnet (z. B. Browser oder Mailprogramm). Schließe die Programme auf dem alten Rechner und klicke „Erneut starten“ – bereits Kopiertes wird übersprungen.",
+      other: "{count} Dateien waren von Programmen geöffnet (z. B. Browser oder Mailprogramm). Schließe die Programme auf dem alten Rechner und klicke „Erneut starten“ – bereits Kopiertes wird übersprungen.",
+    },
     "failure.not_found": "auf dem alten Rechner nicht mehr vorhanden",
     "failure.file_changed": "hat sich während der Übertragung geändert",
     "failure.write_failed": "ließ sich hier nicht speichern",
