@@ -489,6 +489,9 @@ function renderReceive() {
   } else {
     status.textContent = t("receive.waiting");
   }
+  // Eigene Adresse – falls der alte Rechner uns nicht von selbst findet.
+  el("receive-addrs").textContent = state.addrs && state.addrs.length
+    ? t("receive.addrs", { addrs: state.addrs.join(" · ") }) : "";
 }
 
 let renderedPeers = "";
@@ -533,8 +536,10 @@ function renderSend() {
   } else {
     status.textContent = t("send.searching");
   }
-  document.getElementById("pair-button").disabled = pairing || !state.peers.length;
+  const manualAddr = el("addr-input").value.trim();
+  document.getElementById("pair-button").disabled = pairing || (!state.peers.length && !manualAddr);
 }
+el("addr-input").addEventListener("input", () => state && render());
 
 // ---- Aktionen ----
 
@@ -555,6 +560,8 @@ for (const btn of document.querySelectorAll("[data-action=reset]")) {
       state = await post("/api/reset");
       renderedPeers = "";
       document.getElementById("code-input").value = "";
+      el("addr-input").value = "";
+      el("manual").open = false;
       render();
     } catch (err) {
       toast(errorText(err.code));
@@ -564,7 +571,9 @@ for (const btn of document.querySelectorAll("[data-action=reset]")) {
 
 document.getElementById("pair-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
-  if (!selectedPeer) {
+  // Eingetippte Adresse geht vor, sonst der gewählte gefundene Rechner.
+  const addr = el("addr-input").value.trim();
+  if (!addr && !selectedPeer) {
     toast(t("send.choosePeer"));
     return;
   }
@@ -572,7 +581,8 @@ document.getElementById("pair-form").addEventListener("submit", async (ev) => {
   pairing = true;
   render();
   try {
-    state = await post("/api/pair", { peer: selectedPeer, code: input.value });
+    const target = addr ? { addr } : { peer: selectedPeer };
+    state = await post("/api/pair", { ...target, code: input.value });
     input.value = "";
   } catch (err) {
     toast(errorText(err.code));

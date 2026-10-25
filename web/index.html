@@ -53,6 +53,7 @@
       <p data-i18n="receive.instruction"></p>
       <p class="code" id="code" aria-live="polite"></p>
       <p class="status" id="receive-status" aria-live="polite"></p>
+      <p class="hint" id="receive-addrs"></p>
       <div class="actions">
         <button class="quiet" data-action="reset" data-i18n="common.cancel"></button>
       </div>
@@ -67,6 +68,12 @@
         <div id="peer-list"></div>
         <p class="status" id="send-status" aria-live="polite"></p>
       </fieldset>
+      <details class="manual" id="manual">
+        <summary data-i18n="send.manualToggle"></summary>
+        <p class="hint" data-i18n="send.manualHint"></p>
+        <label for="addr-input" data-i18n="send.addrLabel"></label>
+        <input id="addr-input" autocomplete="off" spellcheck="false" placeholder="192.168.178.23">
+      </details>
       <form id="pair-form" class="pair-form">
         <label for="code-input" data-i18n="send.codeLabel"></label>
         <div class="pair-row">

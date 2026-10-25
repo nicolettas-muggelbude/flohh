@@ -157,6 +157,23 @@ main { flex: 1; padding-top: 40px; }
 .peer-os { color: var(--muted); margin-left: auto; }
 
 .pair-form label { display: block; font-weight: 700; margin-bottom: 8px; }
+
+/* Verbinden per Adresse */
+.manual { margin: 0 0 20px; }
+.manual summary { cursor: pointer; color: var(--accent-text); font-weight: 700; }
+.manual label { display: block; font-weight: 700; margin: 8px 0; }
+input#addr-input {
+  font: inherit;
+  min-height: 44px;
+  width: min(100%, 22ch);
+  padding: 6px 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+}
+input#addr-input:focus-visible { border-color: var(--accent); }
+#receive-addrs:empty { display: none; }
 .pair-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
 input#code-input {

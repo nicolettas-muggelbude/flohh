@@ -37,7 +37,7 @@ func loopback6(m **Manager) func() []*net.UDPAddr {
 func none() []*net.UDPAddr { return nil }
 
 // setup baut Sender ("alt") und Empfänger ("neu"), die sich nur gegenseitig
-// über IPv4 rufen. Wie im echten Betrieb nimmt die Windows-Seite keine
+// über IPv4 rufen. Wie im echten Betrieb nimmt Windows nur als Empfänger
 // Verbindungen an.
 func setup(t *testing.T, sendOS, recvOS string) (s, r *Manager) {
 	t.Helper()
@@ -52,12 +52,14 @@ func setupWith(t *testing.T, sendOS, recvOS string, tf targetsFor) (s, r *Manage
 	t.Helper()
 	var err error
 	s4, s6 := tf(&r)
-	s, err = New(Config{Name: "alt", OS: sendOS, Listen: sendOS != "windows", Targets: s4, Targets6: s6})
+	s, err = New(Config{Name: "alt", OS: sendOS, Listen: sendOS != "windows",
+		ReceiverListens: sendOS == "windows", Targets: s4, Targets6: s6})
 	if err != nil {
 		t.Fatal(err)
 	}
 	r4, r6 := tf(&s)
-	r, err = New(Config{Name: "neu", OS: recvOS, Listen: recvOS != "windows", Targets: r4, Targets6: r6})
+	r, err = New(Config{Name: "neu", OS: recvOS, Listen: recvOS != "windows",
+		ReceiverListens: recvOS == "windows", Targets: r4, Targets6: r6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,6 +116,7 @@ func TestPairing(t *testing.T) {
 		{"Linux zu Linux, Sender ruft an", "linux", "linux"},
 		{"Windows zu Linux, Windows ruft an", "windows", "linux"},
 		{"Linux zu Windows, Windows-Empfänger ruft an", "linux", "windows"},
+		{"Windows zu Windows, Empfänger nimmt an", "windows", "windows"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -187,6 +190,62 @@ func TestDialFallsBackToNextAddress(t *testing.T) {
 	s.mu.Unlock()
 	if err := s.Pair(context.Background(), p.ID, r.State().Code); err != nil {
 		t.Fatalf("Kopplung: %v", err)
+	}
+}
+
+// Finden sich die Rechner nicht von selbst, tippt man am Sender die Adresse
+// des Empfängers ein.
+func TestPairAddr(t *testing.T) {
+	for _, recvOS := range []string{"linux", "windows"} {
+		t.Run("Empfänger "+recvOS, func(t *testing.T) {
+			s, r := setupWith(t, "linux", recvOS, func(**Manager) (v4, v6 func() []*net.UDPAddr) {
+				return none, none // keine Suche: nur per Adresse
+			})
+			st := r.State()
+			if len(st.Addrs) == 0 && recvOS == "linux" {
+				t.Log("Hinweis: keine Netzwerkadressen gefunden (nur Loopback?)")
+			}
+			addr := "127.0.0.1:" + strconv.Itoa(r.tcpPort)
+			ctx := context.Background()
+
+			if err := s.PairAddr(ctx, "", st.Code); errCode(err) != ErrBadAddress {
+				t.Errorf("leere Adresse: %v", err)
+			}
+			if err := s.PairAddr(ctx, "127.0.0.1:"+strconv.Itoa(s.tcpPort), st.Code); errCode(err) != ErrNotReceiver {
+				t.Errorf("Adresse eines Senders: %v, erwartet %s", err, ErrNotReceiver)
+			}
+			if err := s.PairAddr(ctx, addr, otherCode(st.Code)); errCode(err) != ErrWrongCode {
+				t.Errorf("falscher Code: %v", err)
+			}
+			if err := s.PairAddr(ctx, addr, st.Code); err != nil {
+				t.Fatalf("Kopplung per Adresse: %v", err)
+			}
+			eventually(t, "Empfänger verbunden", func() bool { return r.State().Phase == PhaseConnected })
+			if p := s.State().Partner; p == nil || p.Name != "neu" || p.OS != recvOS {
+				t.Errorf("Partner: %+v", p)
+			}
+		})
+	}
+}
+
+func TestNormAddr(t *testing.T) {
+	cases := map[string]string{
+		"192.168.1.5":         "192.168.1.5:41731",
+		" 192.168.1.5 ":       "192.168.1.5:41731",
+		"192.168.1.5:5000":    "192.168.1.5:5000",
+		"pc-wohnzimmer":       "pc-wohnzimmer:41731",
+		"fe80::1%eth0":        "[fe80::1%eth0]:41731",
+		"[fe80::1%eth0]:4000": "[fe80::1%eth0]:4000",
+	}
+	for in, want := range cases {
+		if got, err := normAddr(in); err != nil || got != want {
+			t.Errorf("normAddr(%q) = %q, %v; erwartet %q", in, got, err, want)
+		}
+	}
+	for _, bad := range []string{"", "a b", "http://x", ":41731"} {
+		if _, err := normAddr(bad); err == nil {
+			t.Errorf("normAddr(%q) angenommen", bad)
+		}
 	}
 }
 

@@ -3,6 +3,22 @@
 Versionen nach [Semantic Versioning](https://semver.org/lang/de/): `v0.x.y`
 ist eine Vorabversion – bis `v1.0.0` kann sich noch einiges ändern.
 
+## v0.2.0 – in Arbeit
+
+Schwerpunkt: Verbinden über LAN und WLAN, auch Windows ↔ Windows.
+
+### Verbinden
+
+- **Windows ↔ Windows:** Ein Windows-Rechner nimmt als Empfänger
+  Verbindungen an. Beim ersten „Empfangen“ fragt die Windows-Firewall
+  einmal nach („Zugriff zulassen“).
+- **Verbinden per Adresse:** Der Empfänger zeigt seine Adresse an; am Sender
+  lässt sie sich eintippen, wenn sich die Rechner nicht von selbst finden
+  (z. B. LAN und WLAN in getrennten Netzen, Router filtert Rundrufe).
+- Verständliche Meldung, wenn die Firewall eines Windows-Empfängers blockt.
+- Beide Seiten stellen sich beim Verbinden vor (Protokoll v2) – v0.2.0
+  arbeitet nicht mit v0.1.0 zusammen.
+
 ## v0.1.0 – 2026-10-25
 
 Erste Vorabversion.

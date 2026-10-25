@@ -24,6 +24,7 @@ type Session interface {
 	State() peer.State
 	SetRole(peer.Role) error
 	Pair(ctx context.Context, id, code string) error
+	PairAddr(ctx context.Context, addr, code string) error
 	Reset()
 }
 
@@ -180,13 +181,20 @@ func (s *server) handleRole(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) handlePair(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Peer string `json:"peer"`
+		Peer string `json:"peer"` // gefundener Rechner …
+		Addr string `json:"addr"` // … oder eingetippte Adresse
 		Code string `json:"code"`
 	}
 	if !readJSON(w, r, &req) {
 		return
 	}
-	if err := s.session.Pair(r.Context(), req.Peer, req.Code); err != nil {
+	var err error
+	if req.Addr != "" {
+		err = s.session.PairAddr(r.Context(), req.Addr, req.Code)
+	} else {
+		err = s.session.Pair(r.Context(), req.Peer, req.Code)
+	}
+	if err != nil {
 		writeError(w, err)
 		return
 	}

@@ -25,7 +25,9 @@ const (
 	ErrConnectFailed = "connect_failed" // Verbindung kam nicht zustande
 	ErrWrongRole     = "wrong_role"     // Aktion passt nicht zur Rolle
 	ErrNetwork       = "network"        // Ports/Netzwerk nicht nutzbar
-	ErrBothWindows   = "both_windows"   // Windows↔Windows braucht noch eine Firewall-Regel
+	ErrFirewallPeer  = "firewall_peer"  // Windows-Empfänger lässt nichts herein (Firewall)
+	ErrBadAddress    = "bad_address"    // eingetippte Adresse ungültig
+	ErrNotReceiver   = "not_receiver"   // unter der Adresse wartet kein Empfänger
 )
 
 // Error ist ein Fehler mit einem Code für die Oberfläche.
@@ -65,6 +67,10 @@ type State struct {
 	Peers   []Peer `json:"peers"`             // passende Gegenstellen
 	Partner *Peer  `json:"partner,omitempty"` // nach erfolgreicher Kopplung
 	Error   string `json:"error,omitempty"`   // letzter Fehlercode
+
+	// Addrs: eigene Adressen zum Eintippen am anderen Rechner, falls sich die
+	// beiden nicht von selbst finden (nur beim Empfänger).
+	Addrs []string `json:"addrs,omitempty"`
 }
 
 // Config legt fest, wie der Manager das Netz benutzt.
@@ -79,6 +85,13 @@ type Config struct {
 	// sie im öffentlichen Netz ohnehin blocken, und so erscheint auch keine
 	// Firewall-Abfrage. Windows baut Verbindungen selbst auf (senderDials).
 	Listen bool
+
+	// ReceiverListens: als Empfänger trotzdem Verbindungen annehmen und den
+	// festen Rundruf-Port belegen (Windows). Nur so erreicht ein
+	// Windows-Sender einen Windows-Empfänger. Windows fragt dann einmal per
+	// Firewall-Fenster nach.
+	ReceiverListens       bool
+	ReceiverDiscoveryPort int // UDP-Port dabei; 0 = beliebig
 
 	// Targets liefert die Ziele für Rundrufe über IPv4, Targets6 über IPv6;
 	// nil = alle Schnittstellen.
@@ -110,11 +123,13 @@ func DefaultConfig() Config {
 		discovery = 0
 	}
 	return Config{
-		Name:          name,
-		OS:            runtime.GOOS,
-		DiscoveryPort: discovery,
-		ConnectPort:   ConnectPort,
-		Listen:        listen,
+		Name:                  name,
+		OS:                    runtime.GOOS,
+		DiscoveryPort:         discovery,
+		ConnectPort:           ConnectPort,
+		Listen:                listen,
+		ReceiverListens:       !listen,
+		ReceiverDiscoveryPort: DiscoveryPort,
 	}
 }
 
@@ -185,7 +200,40 @@ func (m *Manager) State() State {
 		}
 	}
 	sort.Slice(s.Peers, func(i, j int) bool { return s.Peers[i].Name < s.Peers[j].Name })
+	if m.role == RoleReceive && m.tcpPort != 0 {
+		s.Addrs = ownAddrs(m.tcpPort)
+	}
 	return s
+}
+
+// ownAddrs: eigene IPv4-Adressen zum Eintippen am anderen Rechner, normale
+// zuerst, 169.254.x.x (Kabel ohne Router) zuletzt. Den Port nur, wenn er
+// nicht der übliche ist.
+func ownAddrs(port int) []string {
+	var normal, linkLocal []string
+	ifaces, _ := net.Interfaces()
+	for _, ifc := range ifaces {
+		if ifc.Flags&net.FlagUp == 0 || ifc.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, _ := ifc.Addrs()
+		for _, a := range addrs {
+			n, ok := a.(*net.IPNet)
+			if !ok || n.IP.To4() == nil {
+				continue
+			}
+			s := n.IP.String()
+			if port != ConnectPort {
+				s = net.JoinHostPort(s, strconv.Itoa(port))
+			}
+			if n.IP.IsLinkLocalUnicast() {
+				linkLocal = append(linkLocal, s)
+			} else {
+				normal = append(normal, s)
+			}
+		}
+	}
+	return append(normal, linkLocal...)
 }
 
 // SetRole wählt die Rolle und beginnt zu suchen bzw. zu warten.
@@ -195,8 +243,15 @@ func (m *Manager) SetRole(role Role) error {
 	}
 	m.Reset()
 
+	// Windows als Empfänger: festen Rundruf-Port belegen und Verbindungen
+	// annehmen, damit auch ein Windows-Sender ihn findet und erreicht.
+	udpPort, listen := m.cfg.DiscoveryPort, m.cfg.Listen
+	if role == RoleReceive && m.cfg.ReceiverListens {
+		udpPort, listen = m.cfg.ReceiverDiscoveryPort, true
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
-	udp, err := listenUDP("udp4", m.cfg.DiscoveryPort)
+	udp, err := listenUDP("udp4", udpPort)
 	if err != nil {
 		cancel()
 		return &Error{ErrNetwork}
@@ -205,9 +260,9 @@ func (m *Manager) SetRole(role Role) error {
 	// verbunden sind, aber unterschiedliche IPv4-Bereiche haben (z. B.
 	// 169.254.x.x und eine fest eingestellte 192.168.x.x). Ohne IPv6 geht
 	// es eben nur über IPv4.
-	udp6, err6 := listenUDP("udp6", m.cfg.DiscoveryPort)
+	udp6, err6 := listenUDP("udp6", udpPort)
 	var ln net.Listener
-	if m.cfg.Listen {
+	if listen {
 		if ln, err = listenTCP(m.cfg.ConnectPort); err != nil {
 			udp.Close()
 			if udp6 != nil {
@@ -286,8 +341,8 @@ func (m *Manager) Reset() {
 	m.peers, m.pending, m.dialing, m.partner = nil, nil, nil, nil
 }
 
-// Pair koppelt den Sender mit dem Empfänger id per Code.
-func (m *Manager) Pair(ctx context.Context, id, code string) error {
+// normCode: nur die Ziffern; ein Code hat genau 6.
+func normCode(code string) (string, error) {
 	code = strings.Map(func(r rune) rune {
 		if r >= '0' && r <= '9' {
 			return r
@@ -295,9 +350,17 @@ func (m *Manager) Pair(ctx context.Context, id, code string) error {
 		return -1
 	}, code)
 	if len(code) != 6 {
-		return &Error{ErrBadCode}
+		return "", &Error{ErrBadCode}
 	}
+	return code, nil
+}
 
+// Pair koppelt den Sender mit dem Empfänger id per Code.
+func (m *Manager) Pair(ctx context.Context, id, code string) error {
+	code, err := normCode(code)
+	if err != nil {
+		return err
+	}
 	m.mu.Lock()
 	if m.role != RoleSend || m.phase != PhaseSearching {
 		m.mu.Unlock()
@@ -313,7 +376,61 @@ func (m *Manager) Pair(ctx context.Context, id, code string) error {
 	m.mu.Unlock()
 
 	c, err := m.pairAsSender(ctx, &peer, code)
-	if err == nil && m.paired(c, &peer) {
+	return m.finishPairing(c, &peer, err)
+}
+
+// PairAddr koppelt den Sender mit einem Empfänger, dessen Adresse jemand
+// eingetippt hat – wenn sich die Rechner nicht von selbst finden (z. B.
+// LAN und WLAN in getrennten Netzen, Router filtert Rundrufe).
+func (m *Manager) PairAddr(ctx context.Context, addr, code string) error {
+	code, err := normCode(code)
+	if err != nil {
+		return err
+	}
+	hostport, err := normAddr(addr)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	if m.role != RoleSend || m.phase != PhaseSearching {
+		m.mu.Unlock()
+		return &Error{ErrWrongRole}
+	}
+	m.phase, m.errCode = PhasePairing, ""
+	m.mu.Unlock()
+
+	c, h, err := m.dial(ctx, hostport)
+	peer := Peer{ID: h.ID, Name: h.Name, OS: h.OS, Role: h.Role, addrs: []string{hostport}}
+	if err == nil && h.Role != RoleReceive {
+		err = &Error{ErrNotReceiver}
+	}
+	if err == nil {
+		c.SetDeadline(time.Now().Add(30 * time.Second))
+		err = pakeClient(c, code)
+		c.SetDeadline(time.Time{})
+	}
+	return m.finishPairing(c, &peer, err)
+}
+
+// normAddr: „192.168.1.5“ → „192.168.1.5:41731“; Port und Rechnernamen
+// sind erlaubt.
+func normAddr(addr string) (string, error) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" || strings.ContainsAny(addr, " /\\") {
+		return "", &Error{ErrBadAddress}
+	}
+	if host, port, err := net.SplitHostPort(addr); err == nil {
+		if host == "" || port == "" {
+			return "", &Error{ErrBadAddress}
+		}
+		return addr, nil
+	}
+	return net.JoinHostPort(strings.Trim(addr, "[]"), strconv.Itoa(ConnectPort)), nil
+}
+
+// finishPairing übernimmt die Verbindung oder meldet den Fehler.
+func (m *Manager) finishPairing(c *tls.Conn, peer *Peer, err error) error {
+	if err == nil && m.paired(c, peer) {
 		return nil
 	}
 	if c != nil {
@@ -337,16 +454,18 @@ func (m *Manager) Pair(ctx context.Context, id, code string) error {
 
 func (m *Manager) pairAsSender(ctx context.Context, p *Peer, code string) (*tls.Conn, error) {
 	if senderDials(m.cfg.OS, p.OS) {
+		// Ein Windows-Empfänger nimmt nur an, wenn dort die Firewall flohh
+		// zugelassen hat (Fenster beim ersten Mal „Empfangen“).
+		blocked := ErrConnectFailed
+		if p.OS == "windows" {
+			blocked = ErrFirewallPeer
+		}
 		if len(p.addrs) == 0 {
-			if m.cfg.OS == "windows" && p.OS == "windows" {
-				// TODO(Meilenstein 2): Firewall-Regel per UAC anlegen.
-				return nil, &Error{ErrBothWindows}
-			}
-			return nil, &Error{ErrConnectFailed}
+			return nil, &Error{blocked}
 		}
 		c, err := m.dialAny(ctx, p.addrs)
 		if err != nil {
-			return nil, err
+			return nil, &Error{blocked}
 		}
 		c.SetDeadline(time.Now().Add(30 * time.Second))
 		err = pakeClient(c, code)
@@ -540,6 +659,9 @@ func (m *Manager) handleIncoming(ctx context.Context, raw net.Conn) {
 		return
 	}
 	h, err := readHello(c)
+	if err == nil {
+		err = writeHello(c, m.helloMsg()) // auch wir stellen uns vor
+	}
 	c.SetDeadline(time.Time{})
 	if err != nil {
 		c.Close()
@@ -608,7 +730,7 @@ func (m *Manager) dialAny(ctx context.Context, addrs []string) (*tls.Conn, error
 	})
 	var lastErr error = &Error{ErrConnectFailed}
 	for _, a := range ordered {
-		c, err := m.dial(ctx, a)
+		c, _, err := m.dial(ctx, a)
 		if err == nil {
 			return c, nil
 		}
@@ -627,29 +749,37 @@ func boolInt(b bool) int {
 	return 0
 }
 
-func (m *Manager) dial(ctx context.Context, addr string) (*tls.Conn, error) {
+// dial verbindet sich mit addr. Beide Seiten stellen sich vor (hello); die
+// Angaben der Gegenseite gelten erst nach der Kopplung als sicher.
+func (m *Manager) dial(ctx context.Context, addr string) (*tls.Conn, hello, error) {
 	m.logf("Verbinde mit %s …", addr)
 	d := net.Dialer{Timeout: 4 * time.Second}
 	raw, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		m.logf("Verbindung zu %s fehlgeschlagen: %v (blockt dort eine Firewall?)", addr, err)
-		return nil, &Error{ErrConnectFailed}
+		return nil, hello{}, &Error{ErrConnectFailed}
 	}
 	c := tls.Client(raw, m.tls)
 	c.SetDeadline(time.Now().Add(10 * time.Second))
 	if err := c.HandshakeContext(ctx); err != nil {
 		m.logf("Verschlüsselung mit %s fehlgeschlagen: %v", addr, err)
 		c.Close()
-		return nil, &Error{ErrConnectFailed}
+		return nil, hello{}, &Error{ErrConnectFailed}
 	}
 	if err := writeHello(c, m.helloMsg()); err != nil {
 		m.logf("Verbindung zu %s abgebrochen: %v", addr, err)
 		c.Close()
-		return nil, &Error{ErrConnectFailed}
+		return nil, hello{}, &Error{ErrConnectFailed}
 	}
-	m.logf("Verbunden mit %s, warte auf Kopplung per Code", addr)
+	h, err := readHello(c)
+	if err != nil {
+		m.logf("Gegenseite %s hat sich nicht vorgestellt: %v", addr, err)
+		c.Close()
+		return nil, hello{}, &Error{ErrConnectFailed}
+	}
+	m.logf("Verbunden mit %s (%s), warte auf Kopplung per Code", addr, h.Name)
 	c.SetDeadline(time.Time{})
-	return c, nil
+	return c, h, nil
 }
 
 // pruneLoop entfernt Gegenstellen, die sich länger nicht gemeldet haben.

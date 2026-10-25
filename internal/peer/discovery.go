@@ -17,7 +17,9 @@ const (
 	ConnectPort   = 41731 // TCP: die eigentliche Verbindung
 )
 
-const protoVersion = 1
+// protoVersion 2 (v0.2.0): Beide Seiten stellen sich beim Verbinden vor.
+// Ältere Versionen werden beim Suchen ignoriert.
+const protoVersion = 2
 
 // Role ist die Rolle, die jemand in der Oberfläche gewählt hat.
 type Role string

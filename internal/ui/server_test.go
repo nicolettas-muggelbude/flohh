@@ -28,8 +28,9 @@ func (f *fakeSession) SetRole(r peer.Role) error {
 	f.role = r
 	return nil
 }
-func (f *fakeSession) Pair(context.Context, string, string) error { return f.pairErr }
-func (f *fakeSession) Reset()                                     { f.role = "" }
+func (f *fakeSession) Pair(context.Context, string, string) error     { return f.pairErr }
+func (f *fakeSession) PairAddr(context.Context, string, string) error { return f.pairErr }
+func (f *fakeSession) Reset()                                         { f.role = "" }
 
 func TestGuard(t *testing.T) {
 	h := New("test", testHost, func() {}, &fakeSession{}, move.New())
