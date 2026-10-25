@@ -8,14 +8,29 @@
 *Daten springen von Rechner zu Rechner.*
 
 Portable App, die beim PC-Umzug Bibliotheken und Ordner von einem Rechner auf
-einen anderen kopiert – Windows, Linux und macOS in allen Richtungen. Heute per
-LAN-Kabel, später auch über WLAN und Thunderbolt/USB4.
+einen anderen kopiert – Windows, Linux und macOS in allen Richtungen. Per
+LAN-Kabel, über den Router (LAN oder WLAN) oder per Thunderbolt/USB4.
 
 **Status:** Meilenstein 2 läuft. Zwei Rechner finden sich im Netz (auch per
 direktem Kabel) und koppeln sich verschlüsselt per 6-stelligem Code. Der alte
 Rechner gibt Benutzerordner frei (Dokumente, Bilder, Musik, Videos,
 Schreibtisch, Downloads), der neue holt sie in seine eigenen Benutzerordner –
 mit Fortschritt, ohne etwas zu überschreiben, und fortsetzbar.
+
+## So lassen sich die Rechner verbinden
+
+| Verbindung | Tempo (ca.) | Hinweis |
+| --- | --- | --- |
+| **LAN-Kabel direkt** von Rechner zu Rechner | bis 110 MB/s | kein Router nötig |
+| **Über den Router** per LAN-Kabel | bis 110 MB/s | beide am selben Router |
+| **Über den Router** per WLAN | 5–60 MB/s | beide im selben WLAN, nicht im Gast-WLAN |
+| **Gemischt**: einer per LAN, einer per WLAN | wie WLAN | beide am selben Router |
+| **Thunderbolt 3/4/5 oder USB4** (USB-C) direkt | 300 MB/s und mehr | beide Anschlüsse müssen Thunderbolt/USB4 können |
+| **USB-LAN-Adapter** (USB-A oder USB-C) plus LAN-Kabel | USB 3: bis 110 MB/s, USB 2: ca. 35 MB/s | für Laptops ohne LAN-Anschluss |
+
+Die Werte sind Richtwerte; oft bremst die langsamere Festplatte. Gast-WLANs
+und manche Mesh-Systeme lassen Geräte nicht miteinander sprechen
+(„Client-Isolation“) – dann per Kabel verbinden.
 
 ## Bauen
 

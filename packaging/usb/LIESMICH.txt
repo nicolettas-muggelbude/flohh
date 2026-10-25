@@ -17,6 +17,22 @@ Welcher Mac? Apfel-Menü > "Über diesen Mac": Steht dort "Chip Apple M…",
 ist es Apple Silicon; steht dort "Prozessor Intel …", ist es Intel.
 
 
+Wie verbinde ich die Rechner?
+-----------------------------
+
+  LAN-Kabel direkt von Rechner zu Rechner   bis 110 MB/s, kein Router nötig
+  Über den Router per LAN-Kabel             bis 110 MB/s
+  Über den Router per WLAN                  5 bis 60 MB/s
+  Gemischt (einer LAN, einer WLAN)          wie WLAN
+  Thunderbolt 3/4/5 oder USB4 (USB-C)       300 MB/s und mehr
+  USB-LAN-Adapter plus LAN-Kabel            USB 3 bis 110 MB/s, USB 2 ca. 35 MB/s
+    (für Laptops ohne LAN-Anschluss)
+
+Über den Router müssen beide im selben Netz sein, nicht im Gast-WLAN.
+Thunderbolt/USB4 geht nur, wenn beide Anschlüsse das können (Blitz-
+Symbol oder "USB4" am Anschluss).
+
+
 Starten
 -------
 
