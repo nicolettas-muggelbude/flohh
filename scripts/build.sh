@@ -70,10 +70,14 @@ cp packaging/usb/LIESMICH.txt dist/usb/
 cp LICENSE dist/usb/LICENSE.txt
 cp THIRD-PARTY-LICENSES.txt dist/usb/
 
-# Zum Herunterladen: ZIP, das man auf einen beliebigen Stick entpackt.
-ZIP="dist/flohh-$VERSION-usb.zip"
+# Zum Herunterladen: ein ZIP mit allem. Entpackt ergibt es einen Ordner
+# „flohh-<version>“ (auch direkt auf einen USB-Stick).
+ZIP="dist/flohh-$VERSION.zip"
 rm -f "$ZIP"
-(cd dist/usb && zip -q -X -r "../$(basename "$ZIP")" .)
+rm -rf "dist/flohh-$VERSION"
+cp -r dist/usb "dist/flohh-$VERSION"
+(cd dist && zip -q -X -r "$(basename "$ZIP")" "flohh-$VERSION")
+rm -rf "dist/flohh-$VERSION"
 echo "→ $ZIP"
 
 ls -lh dist dist/usb

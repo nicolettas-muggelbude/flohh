@@ -70,8 +70,9 @@ nur, wenn sie per Browser, Mail, Nachrichten oder AirDrop auf den Mac kamen.
 `build.sh` legt zusätzlich `dist/usb/` an: alle sechs Dateien mit
 verständlichen Namen (`Flohh-Windows.exe`, `Flohh-Mac-Intel` …)
 und eine `LIESMICH.txt` (Vorlage in `packaging/usb/`). Daraus entsteht
-`flohh-<version>-usb.zip`: auf einen beliebigen Stick entpacken, vorhandene
-Daten bleiben erhalten.
+`flohh-<version>.zip` mit allem: entpackt ergibt es einen Ordner
+`flohh-<version>` – auf dem Rechner oder auf einem beliebigen Stick,
+vorhandene Daten bleiben erhalten.
 
 ## Starten
 

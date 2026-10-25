@@ -4,13 +4,13 @@
 
 | Plattform | Download |
 |-----------|----------|
+| 📦 **Alle Systeme** (empfohlen – ZIP mit allen Programmen und Anleitung, auch für den USB-Stick) | [⬇ flohh-v0.1.0.zip](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0.zip) |
 | 🪟 **Windows** (x64) | [⬇ flohh-v0.1.0-windows-x64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-windows-x64.exe) |
 | 🪟 **Windows** (ARM, z. B. Surface Pro X) | [⬇ flohh-v0.1.0-windows-arm64.exe](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-windows-arm64.exe) |
 | 🐧 **Linux** (x86_64) | [⬇ flohh-v0.1.0-linux-x86_64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-linux-x86_64) |
 | 🐧 **Linux** (ARM64, z. B. Raspberry Pi) | [⬇ flohh-v0.1.0-linux-arm64](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-linux-arm64) |
 | 🍎 **macOS** (Apple Silicon, ungetestet) | [⬇ flohh-v0.1.0-macos-applesilicon](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-macos-applesilicon) |
 | 🍎 **macOS** (Intel, ungetestet) | [⬇ flohh-v0.1.0-macos-intel](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-macos-intel) |
-| 💾 **USB-Stick-Paket** (alle Systeme + Anleitung) | [⬇ flohh-v0.1.0-usb.zip](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/flohh-v0.1.0-usb.zip) |
 | 🔐 Prüfsummen | [⬇ SHA256SUMS.txt](https://github.com/nicolettas-muggelbude/flohh/releases/download/v0.1.0/SHA256SUMS.txt) |
 
 ---
@@ -81,12 +81,37 @@ jetzt von Rechner zu Rechner.** 🐾
 
 ## 🚀 Starten
 
-- **Windows:** Doppelklick. Bei „Der Computer wurde durch Windows geschützt“
-  auf „Weitere Informationen“ → „Trotzdem ausführen“.
-- **Linux:** Datei ausführbar machen (`chmod +x flohh-v0.1.0-linux-x86_64`)
-  und starten – Rechtsklick → „Als Programm ausführen“ oder im Terminal.
-- **Auf beiden Rechnern:** Rolle wählen (alter Rechner „Senden“, neuer
-  „Empfangen“), Code eingeben, Ordner freigeben, Übertragung starten.
+Am einfachsten: **flohh-v0.1.0.zip** laden und entpacken – im Ordner
+`flohh-v0.1.0` liegen die Programme für alle Systeme und eine Anleitung
+(`LIESMICH.txt`). Den Ordner kannst du auch auf einen USB-Stick kopieren.
+
+### 🪟 Windows
+
+Doppelklick auf `Flohh-Windows.exe`. Bei „Der Computer wurde durch Windows
+geschützt“ auf „Weitere Informationen“ → „Trotzdem ausführen“. Fragt die
+Firewall nach: „Zugriff zulassen“ (nur beim ersten Mal).
+
+### 🐧 Linux – bitte genau so, ein Doppelklick startet flohh nicht
+
+1. **Kopieren:** `Flohh-Linux` (bzw. `Flohh-Linux-ARM`) auf den
+   **Schreibtisch** oder in den persönlichen Ordner kopieren. Direkt vom
+   USB-Stick oder aus dem ZIP lässt es sich nicht starten.
+2. **Ausführbar machen** – ein Weg genügt:
+   - **Rechtsklick** auf die Kopie → Eigenschaften → Schalter
+     „Als Programm ausführen“ bzw. „Ausführbar“ einschalten
+   - **Dateimanager:** Eigenschaften → Zugriffsrechte → Haken bei
+     „Datei als Programm ausführen“
+   - **Konsole:** `chmod +x ~/Schreibtisch/Flohh-Linux`
+3. **Starten – nicht per Doppelklick:**
+   - **Rechtsklick** auf die Datei → „Als Programm ausführen“
+   - oder in der **Konsole:** `~/Schreibtisch/Flohh-Linux`
+4. flohh bietet dann an, sich ins **Anwendungsmenü** aufzunehmen. Danach
+   startest du es mit einem Klick über „Anwendungen anzeigen“.
+
+### 🔁 Auf beiden Rechnern
+
+Rolle wählen (alter Rechner „Senden“, neuer „Empfangen“), Code eingeben,
+Ordner freigeben, Übertragung starten.
 
 ---
 

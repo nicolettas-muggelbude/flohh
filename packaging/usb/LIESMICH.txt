@@ -51,24 +51,31 @@ Windows:  Doppelklick auf die .exe. Erscheint "Der Computer wurde durch
 Mac:      Doppelklick auf die Datei. Sie öffnet sich im Terminal, danach
           erscheint die Oberfläche im Browser.
 
-Linux:    Auf dem Stick lässt sich die Datei nicht starten (USB-Sticks
-          kennen kein Ausführungsrecht). Darum einmalig:
+Linux:    WICHTIG: Unter Linux startet flohh NICHT per Doppelklick,
+          und nicht direkt vom USB-Stick oder aus dem ZIP. Einmalig:
 
-          1. Flohh-Linux vom Stick in den eigenen Ordner kopieren,
-             z. B. auf den Schreibtisch.
-          2. Rechtsklick auf die Kopie > Eigenschaften > "Als Programm
-             ausführen" bzw. "Ausführbar" einschalten.
-          3. Rechtsklick auf die Kopie > "Als Programm ausführen".
-             (Ein Doppelklick startet unter Ubuntu keine Programme.)
+          1. KOPIEREN: Flohh-Linux (bzw. Flohh-Linux-ARM) auf den
+             Schreibtisch oder in den persönlichen Ordner kopieren.
+             (USB-Sticks und ZIP-Dateien kennen kein Ausführungsrecht.)
+
+          2. AUSFÜHRBAR MACHEN – ein Weg genügt:
+             - Rechtsklick auf die Kopie > Eigenschaften > Schalter
+               "Als Programm ausführen" bzw. "Ausführbar" einschalten
+             - im Dateimanager: Eigenschaften > Zugriffsrechte >
+               Haken bei "Datei als Programm ausführen"
+             - in der Konsole:  chmod +x ~/Schreibtisch/Flohh-Linux
+
+          3. STARTEN – nicht per Doppelklick (der öffnet unter Ubuntu
+             kein Programm, sondern meldet "keine Anwendung gefunden"):
+             - Rechtsklick auf die Datei > "Als Programm ausführen"
+             - oder in der Konsole:  ~/Schreibtisch/Flohh-Linux
+
           4. flohh fragt dann, ob es ins Anwendungsmenü soll. Mit
              "Aufnehmen" startest du es künftig mit einem Klick über
              "Anwendungen anzeigen". Die Kopie auf dem Schreibtisch kann
              danach weg.
 
-          Alternativ im Terminal:
-              cp /media/$USER/<Stickname>/Flohh-Linux ~/
-              chmod +x ~/Flohh-Linux
-              ~/Flohh-Linux
+          (Je nach System heißt der Schreibtisch auch "Desktop".)
 
 
 Stick abziehen
