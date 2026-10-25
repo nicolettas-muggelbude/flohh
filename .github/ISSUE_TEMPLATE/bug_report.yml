@@ -1,0 +1,128 @@
+name: 🐛 Bug melden
+description: Einen Fehler in flohh melden
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke, dass du dir die Zeit nimmst, diesen Fehler zu melden! Bitte fülle alle relevanten Felder aus.
+
+        **Tipp:** Stürzt flohh unter Linux sofort mit „Speicherzugriffsfehler“ ab, ist die Datei fast immer beim Kopieren beschädigt worden – bitte zuerst mit `sha256sum -c --ignore-missing SHA256SUMS.txt` prüfen (siehe `LIESMICH.txt`).
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Was ist passiert?
+      description: Eine klare Beschreibung des Fehlers.
+      placeholder: Nach Eingabe des Codes erscheint „Der andere Rechner ist nicht erreichbar“ …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: step
+    attributes:
+      label: Bei welchem Schritt?
+      options:
+        - Start von flohh
+        - Rechner finden
+        - Koppeln (Code)
+        - Ordner freigeben / auswählen
+        - Übertragung
+        - Zusammenfassung / Ergebnis
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie kann der Fehler nachvollzogen werden?
+      placeholder: |
+        1. Alter Rechner „Senden“, neuer Rechner „Empfangen“
+        2. Code eingegeben
+        3. Fehler erscheint
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte eigentlich passieren?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os_old
+    attributes:
+      label: Alter Rechner (Senden)
+      options:
+        - Windows 11
+        - Windows 10
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Anderes Linux
+        - macOS
+        - Nicht beteiligt (Fehler nur auf einem Rechner)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os_new
+    attributes:
+      label: Neuer Rechner (Empfangen)
+      options:
+        - Windows 11
+        - Windows 10
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Anderes Linux
+        - macOS
+        - Nicht beteiligt (Fehler nur auf einem Rechner)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Verbindung
+      options:
+        - LAN-Kabel direkt (ohne Router)
+        - Über den Router per LAN
+        - Über den Router per WLAN
+        - Gemischt (einer LAN, einer WLAN)
+        - Thunderbolt / USB4
+        - USB-LAN-Adapter
+        - Adresse von Hand eingegeben
+        - Weiß nicht
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: flohh-Version
+      description: Steht unten in der Fußzeile von flohh bzw. im Konsolenfenster beim Start.
+      placeholder: z. B. v0.2.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Ausgabe im Konsolenfenster (optional, sehr hilfreich)
+      description: |
+        flohh schreibt mit, wen es findet und woran eine Verbindung scheitert:
+        - **Windows:** das schwarze Fenster, das mit flohh aufgeht
+        - **Linux:** flohh im Terminal starten, z. B. `~/Schreibtisch/Flohh-Linux`
+
+        Am wichtigsten sind die Zeilen mit „Gefunden“, „Verbinde mit“ und „fehlgeschlagen“. Bitte nichts Privates mitschicken.
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weitere Informationen
+      description: Screenshots, Fehlermeldungen (z. B. die Zusammenfassung am Ende), Firewall-Fenster oder sonstige Hinweise.

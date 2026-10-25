@@ -1,0 +1,60 @@
+name: ✨ Feature-Wunsch
+description: Eine neue Funktion oder Verbesserung vorschlagen
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hast du eine Idee, wie flohh deine Daten noch besser springen lässt? Wir freuen uns über jeden Vorschlag! 🐾
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem löst dieses Feature?
+      description: Was fehlt dir aktuell? Welche Situation beim Umzug ist unbefriedigend?
+      placeholder: Ich hätte gerne die Möglichkeit, mein Firefox-Profil gleich an die richtige Stelle zu übernehmen …
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Gewünschte Lösung
+      description: Wie stellst du dir die Umsetzung vor?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen (optional)
+      description: Hast du andere Lösungsansätze in Betracht gezogen?
+
+  - type: dropdown
+    id: systems
+    attributes:
+      label: Für welche Systeme?
+      multiple: true
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Alle
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Wie wichtig ist dieses Feature für dich?
+      options:
+        - Wäre schön (nice to have)
+        - Wichtig für meinen Anwendungsfall
+        - Ohne dieses Feature kann ich flohh nicht nutzen
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weitere Informationen
+      description: Screenshots, Skizzen, Links zu ähnlichen Funktionen in anderen Programmen.

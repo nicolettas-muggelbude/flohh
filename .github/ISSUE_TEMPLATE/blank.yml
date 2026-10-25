@@ -1,0 +1,12 @@
+name: 📝 Leer (Freitext)
+description: Freies Issue ohne vorgegebene Struktur
+title: ""
+labels: []
+body:
+  - type: textarea
+    id: content
+    attributes:
+      label: Beschreibung
+      description: Schreib hier, was du möchtest.
+    validations:
+      required: true
