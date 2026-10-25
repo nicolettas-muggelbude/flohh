@@ -39,8 +39,15 @@ func TestInstall(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(home, ".local/share/icons/hicolor/scalable/apps/flohh.svg")); err != nil {
 		t.Error("Icon fehlt")
 	}
-	if st := State(); !st.Installed {
+	// Im Menü steckt jetzt genau diese Fassung: kein Hinweis mehr.
+	if st := State(); !st.Installed || st.Offer || st.Outdated {
 		t.Errorf("nachher: %+v", st)
+	}
+
+	// Steckt dort eine andere Fassung (z. B. v0.1.0), wird Aktualisieren angeboten.
+	os.WriteFile(bin, []byte("alte Fassung"), 0o755)
+	if st := State(); !st.Offer || !st.Outdated {
+		t.Errorf("mit alter Fassung im Menü: %+v", st)
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 type Status struct {
 	Offer     bool `json:"offer"`     // Hinweis anzeigen
 	Installed bool `json:"installed"` // es gibt schon einen Menü-Eintrag
+	Outdated  bool `json:"outdated"`  // … aber mit einer anderen Fassung
 }
 
 type settings struct {

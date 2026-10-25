@@ -148,6 +148,8 @@ const messages = {
     "menu.install": "Aufnehmen",
     "menu.decline": "Nein danke",
     "menu.done": "flohh ist jetzt im Anwendungsmenü.",
+    "menu.update": "Im Anwendungsmenü steckt eine andere flohh-Version. Durch diese ersetzen?",
+    "menu.updateButton": "Aktualisieren",
     "error.wrong_role": "Das passt gerade nicht zur gewählten Rolle.",
     "error.network": "Das Netzwerk lässt sich nicht nutzen. Läuft flohh vielleicht schon einmal?",
     "error.firewall_peer": "Der neue Rechner (Windows) lässt keine Verbindung zu. Dort im Firewall-Fenster „Zugriff zulassen“ wählen – kam keins, flohh dort beenden, neu starten und „Empfangen“ wählen.",

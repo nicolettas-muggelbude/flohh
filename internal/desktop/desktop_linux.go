@@ -1,6 +1,8 @@
 package desktop
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -39,7 +41,8 @@ func running() string {
 }
 
 // State meldet, ob die Aufnahme ins Menü angeboten werden soll: nicht, wenn
-// flohh schon aus dem Menü-Ordner läuft oder jemand „Nein danke“ gesagt hat.
+// im Menü schon genau diese Fassung steckt oder jemand „Nein danke“ gesagt
+// hat. Steckt dort eine andere Fassung, wird „Aktualisieren“ angeboten.
 func State() Status {
 	p, err := userPaths()
 	if err != nil {
@@ -47,10 +50,36 @@ func State() Status {
 	}
 	_, statErr := os.Stat(p.entry)
 	installed := statErr == nil
+	exe := running()
+	current := exe == p.bin || sameContent(exe, p.bin)
 	return Status{
 		Installed: installed,
-		Offer:     running() != p.bin && !loadSettings().MenuDeclined,
+		Offer:     !current && !loadSettings().MenuDeclined,
+		Outdated:  installed && !current,
 	}
+}
+
+// sameContent: beide Dateien sind gleich (Größe, dann Prüfsumme).
+func sameContent(a, b string) bool {
+	fa, errA := os.Stat(a)
+	fb, errB := os.Stat(b)
+	if errA != nil || errB != nil || fa.Size() != fb.Size() {
+		return false
+	}
+	return fileHash(a) == fileHash(b)
+}
+
+func fileHash(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Install kopiert die laufende flohh-Datei nach ~/.local/bin und legt Icon

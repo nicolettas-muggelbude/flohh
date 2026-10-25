@@ -55,6 +55,10 @@ async function loadInfo() {
     });
     infoOS = i.os;
     document.getElementById("menu-offer").hidden = !i.menu.offer;
+    if (i.menu.outdated) { // im Menü steckt eine andere Fassung
+      document.querySelector("#menu-offer p").textContent = t("menu.update");
+      el("menu-install").textContent = t("menu.updateButton");
+    }
     document.getElementById("firewall-hint").hidden = i.os !== "windows";
   } catch (err) {
     el.textContent = t("info.noConnection");
