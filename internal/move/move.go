@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/apps"
 	"github.com/nicolettas-muggelbude/flohh/internal/folders"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
 	"github.com/nicolettas-muggelbude/flohh/internal/transfer"
@@ -37,16 +38,17 @@ func (e *Error) Error() string { return e.Code }
 
 // Folder ist ein Ordner in der Anzeige.
 type Folder struct {
-	ID             string       `json:"id"`             // Art (documents …) oder custom-N
-	Kind           folders.Kind `json:"kind,omitempty"` // leer bei eigenen Ordnern
-	Name           string       `json:"name,omitempty"` // Ordnername bei eigenen Ordnern
-	Source         string       `json:"source"`         // Pfad auf dem alten Rechner
-	Target         string       `json:"target,omitempty"`
-	transfer.Stats              // Dateien, Bytes, bewusst Weggelassenes
-	Ready          bool         `json:"ready"`             // Zählung fertig
-	Shared         bool         `json:"shared,omitempty"`  // Sender: freigegeben
-	Custom         bool         `json:"custom,omitempty"`  // eigener Ordner
-	AppData        bool         `json:"appdata,omitempty"` // Programmeinstellungen von Windows
+	ID             string           `json:"id"`             // Art (documents …) oder custom-N
+	Kind           folders.Kind     `json:"kind,omitempty"` // leer bei eigenen Ordnern
+	Name           string           `json:"name,omitempty"` // Ordnername bei eigenen Ordnern
+	Source         string           `json:"source"`         // Pfad auf dem alten Rechner
+	Target         string           `json:"target,omitempty"`
+	transfer.Stats                  // Dateien, Bytes, bewusst Weggelassenes
+	Ready          bool             `json:"ready"`             // Zählung fertig
+	Shared         bool             `json:"shared,omitempty"`  // Sender: freigegeben
+	Custom         bool             `json:"custom,omitempty"`  // eigener Ordner
+	AppData        bool             `json:"appdata,omitempty"` // Programmeinstellungen von Windows
+	App            transfer.AppInfo `json:"app,omitempty"`     // Programmdaten (Thunderbird)
 }
 
 // State ist der Stand für die Oberfläche.
@@ -120,6 +122,12 @@ func (c *Coordinator) addKnown() {
 	for _, f := range folders.Known() {
 		c.local = append(c.local, Folder{ID: string(f.Kind), Kind: f.Kind, Source: f.Path})
 		go c.count(string(f.Kind), f.Path)
+	}
+	// Programmdaten, Schritt 1: Thunderbird – der ganze Thunderbird-Ordner.
+	for _, a := range apps.Thunderbird() {
+		c.local = append(c.local, Folder{ID: a.ID, Name: a.Name, Source: a.Dir,
+			App: transfer.AppInfo{Name: a.App, Variant: a.Variant, Profile: a.Active}})
+		go c.count(a.ID, a.Dir)
 	}
 }
 
@@ -238,7 +246,7 @@ func (c *Coordinator) State() State {
 		}
 		for _, f := range c.local {
 			f.Shared = shared[f.ID]
-			f.AppData = isAppData(f.Source)
+			f.AppData = isAppData(f.Source) && f.App.Name == "" // Thunderbird ist nützlich
 			s.Folders = append(s.Folders, f)
 		}
 		s.Shared = len(shared) > 0
@@ -248,10 +256,11 @@ func (c *Coordinator) State() State {
 	case c.role == peer.RoleReceive:
 		for _, r := range c.offer {
 			f := Folder{ID: r.ID, Name: r.Name, Source: r.Source, Target: c.target(r),
-				Stats: r.Stats, Ready: r.Ready, AppData: isAppData(r.Source)}
+				Stats: r.Stats, Ready: r.Ready, App: r.App,
+				AppData: isAppData(r.Source) && r.App.Name == ""}
 			if k := folders.Kind(r.ID); folders.Valid(k) {
 				f.Kind = k
-			} else {
+			} else if r.App.Name == "" {
 				f.Custom = true
 			}
 			s.Folders = append(s.Folders, f)
@@ -277,7 +286,7 @@ func (c *Coordinator) Share(ids []string) error {
 	for _, id := range ids {
 		for _, f := range c.local {
 			if f.ID == id {
-				list = append(list, transfer.Share{ID: f.ID, Name: f.Name, Path: f.Source})
+				list = append(list, transfer.Share{ID: f.ID, Name: f.Name, Path: f.Source, App: f.App})
 			}
 		}
 	}

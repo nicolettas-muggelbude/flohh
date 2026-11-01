@@ -24,6 +24,7 @@ type Server struct {
 type share struct {
 	name  string
 	path  string
+	app   AppInfo
 	stats Stats
 	ready bool
 }
@@ -35,6 +36,7 @@ type Share struct {
 	ID   string
 	Name string // Anzeigename (eigene Ordner)
 	Path string
+	App  AppInfo // bei Programmdaten
 }
 
 // Share gibt Ordner frei und ersetzt frühere Freigaben. Dateien und Größe
@@ -46,7 +48,7 @@ func (s *Server) Share(list []Share) {
 	s.order = nil
 	s.shares = map[string]*share{}
 	for _, sh := range list {
-		x := &share{name: sh.Name, path: sh.Path}
+		x := &share{name: sh.Name, path: sh.Path, app: sh.App}
 		s.order = append(s.order, sh.ID)
 		s.shares[sh.ID] = x
 		go s.count(gen, x)
@@ -70,7 +72,7 @@ func (s *Server) Roots() []Root {
 	out := []Root{}
 	for _, id := range s.order {
 		sh := s.shares[id]
-		out = append(out, Root{ID: id, Name: sh.name, Source: sh.path, Stats: sh.stats, Ready: sh.ready})
+		out = append(out, Root{ID: id, Name: sh.name, Source: sh.path, App: sh.app, Stats: sh.stats, Ready: sh.ready})
 	}
 	return out
 }

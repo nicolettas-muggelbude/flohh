@@ -107,11 +107,19 @@ type response struct {
 // Root ist ein freigegebener Ordner. ID ist die Art (folders.Kind) oder bei
 // eigenen Ordnern „custom-N“.
 type Root struct {
-	ID     string `json:"id"`
-	Name   string `json:"name,omitempty"`   // Ordnername (für eigene Ordner)
-	Source string `json:"source,omitempty"` // Pfad auf dem alten Rechner (zur Anzeige)
-	Stats         // Dateien, Bytes, bewusst Weggelassenes
-	Ready  bool   `json:"ready"` // Zählung fertig
+	ID     string  `json:"id"`
+	Name   string  `json:"name,omitempty"`   // Ordnername (für eigene Ordner)
+	Source string  `json:"source,omitempty"` // Pfad auf dem alten Rechner (zur Anzeige)
+	App    AppInfo `json:"app,omitempty"`    // bei Programmdaten (z. B. Thunderbird)
+	Stats          // Dateien, Bytes, bewusst Weggelassenes
+	Ready  bool    `json:"ready"` // Zählung fertig
+}
+
+// AppInfo beschreibt Programmdaten (Schritt 1: Thunderbird) für die Anzeige.
+type AppInfo struct {
+	Name    string `json:"name,omitempty"`    // "thunderbird"
+	Variant string `json:"variant,omitempty"` // windows | macos | system | snap | flatpak
+	Profile string `json:"profile,omitempty"` // aktives Profil
 }
 
 // Entry ist eine Datei in einem freigegebenen Ordner.

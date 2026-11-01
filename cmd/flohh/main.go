@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nicolettas-muggelbude/flohh/internal/apps"
 	"github.com/nicolettas-muggelbude/flohh/internal/browser"
 	"github.com/nicolettas-muggelbude/flohh/internal/move"
 	"github.com/nicolettas-muggelbude/flohh/internal/peer"
@@ -52,6 +53,9 @@ func run(args []string) error {
 	case "version", "--version", "-v":
 		fmt.Println("flohh", version)
 		return nil
+	case "thunderbird":
+		printThunderbird()
+		return nil
 	case "help", "--help", "-h":
 		printHelp()
 		return nil
@@ -65,13 +69,36 @@ func printHelp() {
 	fmt.Println(`Flohh – Daten springen von Rechner zu Rechner
 
 Befehle:
-  gui        Oberfläche im Browser starten (Standard)
-  version    Version anzeigen
-  help       diese Hilfe
+  gui          Oberfläche im Browser starten (Standard)
+  version      Version anzeigen
+  thunderbird  zeigen, welche Thunderbird-Daten flohh findet
+  help         diese Hilfe
 
 Optionen für gui:
   -port N        fester Port für die Oberfläche (Standard: automatisch)
   -no-browser    Browser nicht automatisch öffnen`)
+}
+
+// printThunderbird zeigt, welche Thunderbird-Daten flohh erkennt – zum
+// Prüfen auf echten Rechnern, ohne etwas zu übertragen.
+func printThunderbird() {
+	found := apps.Thunderbird()
+	if len(found) == 0 {
+		fmt.Println("Keine Thunderbird-Daten gefunden.")
+		return
+	}
+	for _, a := range found {
+		fmt.Printf("Thunderbird (%s)\n  Ordner:  %s\n  Ziel:    ~/%s\n", a.Variant, a.Dir, a.Name)
+		for _, p := range a.Profiles {
+			mark := " "
+			if p.Active {
+				mark = "*"
+			}
+			fmt.Printf("  %s Profil %-20s %s\n", mark, p.Name, p.Path)
+		}
+		fmt.Println()
+	}
+	fmt.Println("* = aktives Profil")
 }
 
 func runGUI(args []string) error {

@@ -3,6 +3,19 @@
 Versionen nach [Semantic Versioning](https://semver.org/lang/de/): `v0.x.y`
 ist eine Vorabversion – bis `v1.0.0` kann sich noch einiges ändern.
 
+## v0.3.0 – in Arbeit
+
+### Programme: Thunderbird (Schritt 1)
+
+- flohh erkennt Thunderbird unter Windows, macOS und Linux (Systempaket,
+  Snap, Flatpak) samt aktivem Profil und bietet den ganzen
+  Thunderbird-Ordner mit allen Profilen zum Übertragen an.
+- Auf dem neuen Rechner landet er vorerst als sichtbarer Ordner im
+  Benutzerordner (`~/Thunderbird`, `~/Thunderbird-Snap`,
+  `~/Thunderbird-Flatpak`) – noch nicht am Ort, an dem Thunderbird ihn
+  sucht. Die Übernahme ins neue Thunderbird folgt in späteren Schritten.
+- `flohh thunderbird` zeigt im Terminal, was erkannt wurde.
+
 ## v0.2.0 – 2026-10-25
 
 Schwerpunkt: Verbinden über LAN und WLAN, auch Windows ↔ Windows.

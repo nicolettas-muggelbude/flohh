@@ -65,6 +65,14 @@ const messages = {
 
     "share.addFolder": "Weiteren Ordner hinzufügen …",
 
+    "app.thunderbird.windows": "Thunderbird",
+    "app.thunderbird.macos": "Thunderbird",
+    "app.thunderbird.system": "Thunderbird",
+    "app.thunderbird.snap": "Thunderbird (Snap)",
+    "app.thunderbird.flatpak": "Thunderbird (Flatpak)",
+    "app.thunderbird.closeHint": "Thunderbird vorher schließen – sonst sind Dateien gesperrt. Übertragen wird der ganze Thunderbird-Ordner mit allen Profilen.",
+    "app.activeProfile": "aktives Profil: {profile}",
+
     "browse.titleAdd": "Ordner hinzufügen",
     "browse.titleTarget": "Ziel für „{name}“",
     "browse.hintAdd": "Wähle einen Ordner, der zusätzlich auf den neuen Rechner soll.",

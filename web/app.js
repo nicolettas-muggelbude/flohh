@@ -111,8 +111,14 @@ function resetMoveUI() {
   shareKey = offerKey = "";
 }
 
-// Anzeigename: Benutzerordner übersetzt, eigene Ordner mit ihrem Namen.
-const folderLabel = (f) => (f.kind ? t(`folder.${f.kind}`) : f.name);
+// Anzeigename: Benutzerordner übersetzt, Programmdaten mit Variante
+// („Thunderbird (Snap)“), eigene Ordner mit ihrem Namen.
+const isApp = (f) => f.app && f.app.name;
+const folderLabel = (f) => {
+  if (f.kind) return t(`folder.${f.kind}`);
+  if (isApp(f)) return t(`app.${f.app.name}.${f.app.variant}`);
+  return f.name;
+};
 
 // Neue Ordner sind anfangs gewählt; danach zählt, was jemand anklickt.
 function selectNew(list, seen, sel) {
@@ -207,8 +213,14 @@ function folderRows(container, list, sel, mode) {
     if (mode === "share") {
       text.append(span("folder-path", f.source));
     } else {
-      if (f.custom) text.append(span("folder-path", t("folder.from", { path: f.source })));
+      if (f.custom || isApp(f)) text.append(span("folder-path", t("folder.from", { path: f.source })));
       text.append(span("folder-path", t("folder.target", { path: f.target })));
+    }
+    if (isApp(f) && f.app.profile) {
+      text.append(span("folder-path", t("app.activeProfile", { profile: f.app.profile })));
+    }
+    if (isApp(f) && mode === "share") {
+      text.append(span("folder-hint", t(`app.${f.app.name}.closeHint`)));
     }
     // Programmeinstellungen von Windows: unter Linux/macOS meist nutzlos.
     if (f.appdata && (mode === "share" || infoOS !== "windows")) {
