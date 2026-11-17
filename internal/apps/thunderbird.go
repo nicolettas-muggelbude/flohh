@@ -1,6 +1,7 @@
 // Package apps erkennt Programme, deren Daten beim Umzug mitkommen sollen.
 // Schritt 1: Thunderbird – erkennen, welche Installationen Daten haben und
 // welches Profil aktiv ist. Übertragen wird der ganze Thunderbird-Ordner.
+// Schritt 2 (version.go): Versionen von Profil und Installation vergleichen.
 package apps
 
 import (
@@ -19,14 +20,16 @@ type App struct {
 	Name     string    `json:"name"`    // Ordnername beim Ziel, z. B. "Thunderbird-Snap"
 	Dir      string    `json:"dir"`     // Datenordner mit profiles.ini
 	Profiles []Profile `json:"profiles"`
-	Active   string    `json:"active"` // Name des aktiven Profils
+	Active   string    `json:"active"`  // Name des aktiven Profils
+	Version  string    `json:"version"` // Version, mit der das aktive Profil zuletzt lief
 }
 
 // Profile ist ein Thunderbird-Profil aus profiles.ini.
 type Profile struct {
-	Name   string `json:"name"`
-	Path   string `json:"path"` // absoluter Pfad
-	Active bool   `json:"active"`
+	Name    string `json:"name"`
+	Path    string `json:"path"` // absoluter Pfad
+	Active  bool   `json:"active"`
+	Version string `json:"version"` // aus compatibility.ini, leer = unbekannt
 }
 
 // candidate ist ein möglicher Datenordner.
@@ -81,7 +84,7 @@ func findThunderbird(goos, home, appData string) []App {
 		}
 		for _, p := range profiles {
 			if p.Active {
-				a.Active = p.Name
+				a.Active, a.Version = p.Name, p.Version
 			}
 		}
 		// Zwei Systempaket-Ordner (alt und neu) bekommen verschiedene IDs.
@@ -148,7 +151,7 @@ func readProfiles(dir string) ([]Profile, error) {
 		if name == "" {
 			name = filepath.Base(path)
 		}
-		profiles = append(profiles, Profile{Name: name, Path: path})
+		profiles = append(profiles, Profile{Name: name, Path: path, Version: profileVersion(path)})
 		if s.keys["Default"] == "1" && defaultFlag == "" {
 			defaultFlag = path
 		}

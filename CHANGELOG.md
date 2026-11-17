@@ -16,6 +16,22 @@ ist eine Vorabversion – bis `v1.0.0` kann sich noch einiges ändern.
   sucht. Die Übernahme ins neue Thunderbird folgt in späteren Schritten.
 - `flohh thunderbird` zeigt im Terminal, was erkannt wurde.
 
+### Programme: Thunderbird (Schritt 2 – Versionen)
+
+- flohh liest, mit welcher Thunderbird-Version das Profil zuletzt lief, und
+  erkennt, welches Thunderbird auf dem neuen Rechner installiert ist
+  (Windows, macOS, Linux: Systempaket, Snap, Flatpak).
+- Der neue Rechner zeigt je Thunderbird-Ordner, ob das Profil dort passt:
+  gleiche oder neuere Version → lässt sich übernehmen; ältere Version (z. B.
+  normale Version → ESR) → Thunderbird würde das Profil nicht öffnen.
+  Noch wird nichts ins Thunderbird übernommen – das folgt in Schritt 3.
+- `flohh thunderbird` zeigt zusätzlich die installierten Versionen und die
+  Version jedes Profils.
+
+### Oberfläche
+
+- Lange Pfade schieben die Ordnerzeilen nicht mehr über den Kartenrand.
+
 ## v0.2.0 – 2026-10-25
 
 Schwerpunkt: Verbinden über LAN und WLAN, auch Windows ↔ Windows.

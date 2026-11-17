@@ -194,7 +194,8 @@ input#code-input:focus-visible { border-color: var(--accent); }
 .panel h3 { margin: 24px 0 12px; font-size: 1.1rem; }
 
 /* Ordnerliste (Freigeben / Abholen) */
-.folder-list { display: grid; gap: 8px; }
+/* minmax(0, 1fr): lange Pfade (nowrap) dürfen die Spalte nicht über die Karte hinaus verbreitern */
+.folder-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .folder {
   display: flex;
   align-items: center;
@@ -226,6 +227,7 @@ button.small { padding: 4px 10px; font-size: .9rem; white-space: nowrap; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.folder-info { color: var(--muted); font-size: .85rem; } /* wie folder-path, aber mit Umbruch */
 .folder-size { color: var(--muted); margin-left: auto; white-space: nowrap; font-size: .9rem; }
 
 /* Fortschritt */

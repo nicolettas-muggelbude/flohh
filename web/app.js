@@ -217,7 +217,18 @@ function folderRows(container, list, sel, mode) {
       text.append(span("folder-path", t("folder.target", { path: f.target })));
     }
     if (isApp(f) && f.app.profile) {
-      text.append(span("folder-path", t("app.activeProfile", { profile: f.app.profile })));
+      text.append(span("folder-path", f.app.version
+        ? t("app.activeProfileVersion", { profile: f.app.profile, version: f.app.version })
+        : t("app.activeProfile", { profile: f.app.profile })));
+    }
+    // Neuer Rechner: Passt das hier installierte Programm zum Profil?
+    if (isApp(f) && mode === "offer") {
+      const here = f.here || [];
+      if (here.length === 0) text.append(span("folder-info", t(`app.${f.app.name}.notHere`)));
+      for (const h of here) {
+        const vars = { app: t(`app.${f.app.name}.${h.variant}`), version: h.version || "?" };
+        text.append(span(h.fit === "older" ? "folder-hint" : "folder-info", t(`app.fit.${h.fit}`, vars)));
+      }
     }
     if (isApp(f) && mode === "share") {
       text.append(span("folder-hint", t(`app.${f.app.name}.closeHint`)));

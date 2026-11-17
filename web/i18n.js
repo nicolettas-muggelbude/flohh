@@ -72,6 +72,12 @@ const messages = {
     "app.thunderbird.flatpak": "Thunderbird (Flatpak)",
     "app.thunderbird.closeHint": "Thunderbird vorher schließen – sonst sind Dateien gesperrt. Übertragen wird der ganze Thunderbird-Ordner mit allen Profilen.",
     "app.activeProfile": "aktives Profil: {profile}",
+    "app.activeProfileVersion": "aktives Profil: {profile}, zuletzt mit Version {version}",
+    "app.thunderbird.notHere": "Thunderbird ist auf diesem Rechner noch nicht installiert.",
+    "app.fit.newer": "Hier installiert: {app} {version} – neuer, das Profil lässt sich übernehmen.",
+    "app.fit.same": "Hier installiert: {app} {version} – gleiche Version, das Profil lässt sich übernehmen.",
+    "app.fit.older": "Hier installiert: {app} {version} – älter als das Profil. So öffnet Thunderbird es nicht; vorher Thunderbird aktualisieren oder später den Import von Thunderbird nutzen.",
+    "app.fit.unknown": "Hier installiert: {app} {version} – Version nicht sicher erkannt.",
 
     "browse.titleAdd": "Ordner hinzufügen",
     "browse.titleTarget": "Ziel für „{name}“",

@@ -82,23 +82,40 @@ Optionen für gui:
 // printThunderbird zeigt, welche Thunderbird-Daten flohh erkennt – zum
 // Prüfen auf echten Rechnern, ohne etwas zu übertragen.
 func printThunderbird() {
+	fmt.Println("Installiert:")
+	installs := apps.ThunderbirdInstalls()
+	if len(installs) == 0 {
+		fmt.Println("  kein Thunderbird gefunden")
+	}
+	for _, in := range installs {
+		fmt.Printf("  Thunderbird (%s) %-14s %s\n", in.Variant, orUnknown(in.Version), in.Dir)
+	}
+	fmt.Println()
+
 	found := apps.Thunderbird()
 	if len(found) == 0 {
 		fmt.Println("Keine Thunderbird-Daten gefunden.")
 		return
 	}
 	for _, a := range found {
-		fmt.Printf("Thunderbird (%s)\n  Ordner:  %s\n  Ziel:    ~/%s\n", a.Variant, a.Dir, a.Name)
+		fmt.Printf("Daten: Thunderbird (%s)\n  Ordner:  %s\n  Ziel:    ~/%s\n", a.Variant, a.Dir, a.Name)
 		for _, p := range a.Profiles {
 			mark := " "
 			if p.Active {
 				mark = "*"
 			}
-			fmt.Printf("  %s Profil %-20s %s\n", mark, p.Name, p.Path)
+			fmt.Printf("  %s Profil %-20s Version %-14s %s\n", mark, p.Name, orUnknown(p.Version), p.Path)
 		}
 		fmt.Println()
 	}
-	fmt.Println("* = aktives Profil")
+	fmt.Println("* = aktives Profil, Version = mit dieser Version lief das Profil zuletzt")
+}
+
+func orUnknown(s string) string {
+	if s == "" {
+		return "unbekannt"
+	}
+	return s
 }
 
 func runGUI(args []string) error {

@@ -120,6 +120,7 @@ type AppInfo struct {
 	Name    string `json:"name,omitempty"`    // "thunderbird"
 	Variant string `json:"variant,omitempty"` // windows | macos | system | snap | flatpak
 	Profile string `json:"profile,omitempty"` // aktives Profil
+	Version string `json:"version,omitempty"` // mit dieser Version lief das Profil zuletzt
 }
 
 // Entry ist eine Datei in einem freigegebenen Ordner.

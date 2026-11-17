@@ -49,6 +49,15 @@ type Folder struct {
 	Custom         bool             `json:"custom,omitempty"`  // eigener Ordner
 	AppData        bool             `json:"appdata,omitempty"` // Programmeinstellungen von Windows
 	App            transfer.AppInfo `json:"app,omitempty"`     // Programmdaten (Thunderbird)
+	Here           []Here           `json:"here,omitempty"`    // Empfänger: dieses Programm hier installiert
+}
+
+// Here ist ein auf dem neuen Rechner installiertes Programm und wie es zu
+// den Daten vom alten Rechner passt (apps.Fit*).
+type Here struct {
+	Variant string `json:"variant"`
+	Version string `json:"version,omitempty"`
+	Fit     string `json:"fit"`
 }
 
 // State ist der Stand für die Oberfläche.
@@ -78,6 +87,7 @@ type Coordinator struct {
 	stop     context.CancelFunc
 	stopping bool
 	lastProg *transfer.Progress // Empfänger: Stand des letzten Laufs
+	installs []apps.Install     // Empfänger: hier installiertes Thunderbird
 }
 
 func New() *Coordinator { return &Coordinator{} }
@@ -100,8 +110,9 @@ func (c *Coordinator) Connected(conn net.Conn, _ peer.Peer, role peer.Role) {
 		srv.Serve(conn) // bis der Empfänger auflegt
 	} else {
 		cl := transfer.NewClient(conn)
+		installs := apps.ThunderbirdInstalls()
 		c.mu.Lock()
-		c.client = cl
+		c.client, c.installs = cl, installs
 		c.mu.Unlock()
 		c.pollOffer(cl) // bis die Verbindung weg ist
 	}
@@ -126,7 +137,7 @@ func (c *Coordinator) addKnown() {
 	// Programmdaten, Schritt 1: Thunderbird – der ganze Thunderbird-Ordner.
 	for _, a := range apps.Thunderbird() {
 		c.local = append(c.local, Folder{ID: a.ID, Name: a.Name, Source: a.Dir,
-			App: transfer.AppInfo{Name: a.App, Variant: a.Variant, Profile: a.Active}})
+			App: transfer.AppInfo{Name: a.App, Variant: a.Variant, Profile: a.Active, Version: a.Version}})
 		go c.count(a.ID, a.Dir)
 	}
 }
@@ -262,6 +273,11 @@ func (c *Coordinator) State() State {
 				f.Kind = k
 			} else if r.App.Name == "" {
 				f.Custom = true
+			}
+			if r.App.Name == "thunderbird" {
+				for _, in := range c.installs { // keins: hier nicht installiert
+					f.Here = append(f.Here, Here{Variant: in.Variant, Version: in.Version, Fit: apps.Fit(r.App.Version, in.Version)})
+				}
 			}
 			s.Folders = append(s.Folders, f)
 		}
