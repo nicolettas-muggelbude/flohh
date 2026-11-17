@@ -23,7 +23,9 @@ ist eine Vorabversion – bis `v1.0.0` kann sich noch einiges ändern.
   (Windows, macOS, Linux: Systempaket, Snap, Flatpak).
 - Der neue Rechner zeigt je Thunderbird-Ordner, ob das Profil dort passt:
   gleiche oder neuere Version → lässt sich übernehmen; ältere Version (z. B.
-  normale Version → ESR) → Thunderbird würde das Profil nicht öffnen.
+  normale Version → ESR) → Thunderbird würde das Profil nicht direkt öffnen.
+  Kopiert wird der Ordner trotzdem (in den persönlichen Ordner oder nach
+  Wahl); ins Thunderbird kommt er dann über „Extras → Importieren“.
   Noch wird nichts ins Thunderbird übernommen – das folgt in Schritt 3.
 - `flohh thunderbird` zeigt zusätzlich die installierten Versionen und die
   Version jedes Profils.
